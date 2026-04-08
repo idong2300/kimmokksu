@@ -58,7 +58,7 @@
     </div>
 
     <div id="t5-section" class="page-section">
-        <button class="btn-home" onclick="showPage('dashboard-section')">⬅ 홈으로</button>
+        <button class="btn-home" onclick="resetT5(); showPage('dashboard-section');">⬅ 홈으로</button>
         <h3>💡 T5 발주 계산기</h3>
         <div class="card">
             <div class="section-title">제품 규격 설정 <button id="specToggleBtn" class="btn-toggle" onclick="toggleSpecSection()">+</button></div>
@@ -74,7 +74,7 @@
             <button class="btn-main" onclick="runT5Calc()">1. 계산하기</button>
         </div>
         <div id="t5-result-area" style="display:none;" class="card"></div>
-        <button class="btn-main" id="t5-save-btn" style="display:none; background:var(--success); margin-bottom:20px;" onclick="saveT5ToCloud()">2. 저장 (새로 저장 또는 수정)</button>
+        <button class="btn-main" id="t5-save-btn" style="display:none; background:var(--success); margin-bottom:20px;" onclick="saveT5ToCloud()">2. 저장하기</button>
         <div class="section-title">📋 최근 공유 히스토리</div>
         <div id="t5-history-list"></div>
     </div>
@@ -90,7 +90,6 @@
         </div>
         <div id="worklog-list"></div>
     </div>
-
     <div id="grout-section" class="page-section">
         <button class="btn-home" onclick="showPage('dashboard-section')">⬅ 홈으로</button>
         <h3>🎨 줄눈 소요량 계산</h3>
@@ -118,6 +117,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     let currentTeam = null;
+    let editingT5Id = null; // 수정 중인 문서 ID 보관용
 
     function showPage(pageId) {
         document.querySelectorAll('.page-section').forEach(s => s.style.display = 'none');
@@ -192,12 +192,34 @@
         lastT5Data = { site, specs, areas, grandTotal, teamId: currentTeam, createdAt: Date.now() };
         document.getElementById('t5-result-area').innerHTML = html + `<br><strong>합계: ${Object.entries(grandTotal).map(([k,v])=>`${k}-${v}개`).join('/')}</strong>`;
         document.getElementById('t5-result-area').style.display = 'block';
-        document.getElementById('t5-save-btn').style.display = 'block';
+        
+        const saveBtn = document.getElementById('t5-save-btn');
+        saveBtn.style.display = 'block';
+        saveBtn.innerText = editingT5Id ? "2. 수정 내용 덮어쓰기 💾" : "2. 우리 팀 히스토리에 저장 🌐";
     }
 
     async function saveT5ToCloud() {
-        await db.collection("t5_history").add(lastT5Data);
-        alert("저장 완료! (기존 데이터와 별개로 새로 저장되었습니다)");
+        if(!lastT5Data) return;
+        if(editingT5Id) {
+            // [덮어쓰기 로직]
+            await db.collection("t5_history").doc(editingT5Id).update(lastT5Data);
+            alert("기존 데이터에 덮어씌웠습니다.");
+        } else {
+            // [새로 저장 로직]
+            await db.collection("t5_history").add(lastT5Data);
+            alert("새로운 데이터로 저장되었습니다.");
+        }
+        resetT5();
+    }
+
+    function resetT5() {
+        editingT5Id = null;
+        document.getElementById('siteName').value = '';
+        document.getElementById('area-list').innerHTML = '';
+        addAreaRow();
+        document.getElementById('t5-result-area').style.display = 'none';
+        document.getElementById('t5-save-btn').style.display = 'none';
+        loadT5Specs();
     }
 
     function listenT5History() {
@@ -207,7 +229,7 @@
                 return `<div class="history-item">
                     <strong>${d.site}</strong><br>${Object.entries(d.grandTotal).map(([k,v])=>`${k}-${v}개`).join(', ')}
                     <div class="history-btns">
-                        <button class="btn-edit" onclick="loadT5ToEdit('${doc.id}')">불러오기</button>
+                        <button class="btn-edit" onclick="loadT5ToEdit('${doc.id}')">수정하기</button>
                         <button class="btn-del" onclick="deleteHistory('${doc.id}')">삭제</button>
                     </div>
                 </div>`;
@@ -219,24 +241,24 @@
         const doc = await db.collection("t5_history").doc(id).get();
         if(!doc.exists) return;
         const d = doc.data();
-        if(!confirm("이 데이터를 불러와서 수정할까요?")) return;
+        if(!confirm("이 데이터를 수정하시겠습니까? (저장 시 기존 데이터가 바뀝니다)")) return;
         
+        editingT5Id = id; // 현재 수정 중인 문서 ID 기억
         document.getElementById('siteName').value = d.site;
-        // 규격 복원
         document.getElementById('spec-list').innerHTML = '';
         d.specs.forEach(s => addSpecRow(s.name, s.size));
-        // 실측 복원
         document.getElementById('area-list').innerHTML = '';
         d.areas.forEach(a => addAreaRow(a.name, a.len));
         
         window.scrollTo({top: 0, behavior: 'smooth'});
-        alert("데이터를 불러왔습니다. 수정 후 다시 [계산] -> [저장] 하세요.");
+        alert("수정 모드입니다. 내용을 고친 후 아래 [계산] -> [덮어쓰기]를 누르세요.");
     }
 
     async function deleteHistory(id) {
         if(confirm("정말 삭제할까요?")) await db.collection("t5_history").doc(id).delete();
     }
 
+    // 작업일보/줄눈 (동일)
     async function saveWorkLog() {
         const d = { date: document.getElementById('logDate').value, worker: document.getElementById('logWorker').value, content: document.getElementById('logContent').value, teamId: currentTeam, createdAt: Date.now() };
         if(!d.content) return;
