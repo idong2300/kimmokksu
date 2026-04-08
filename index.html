@@ -17,10 +17,17 @@
         .btn-main { width: 100%; padding: 16px; background: var(--primary); color: white; font-size: 1.1rem; }
         .btn-home { background: #eee; padding: 8px 12px; font-size: 0.8rem; margin-bottom: 10px; }
         .btn-toggle { background: var(--secondary); color: white; width: 24px; height: 24px; border-radius: 50%; padding: 0; font-size: 1rem; line-height: 24px; }
+        
+        /* 대시보드 그리드 */
         .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
-        .menu-item { background: white; padding: 30px 15px; border-radius: 16px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); cursor: pointer; }
+        .menu-item { background: white; padding: 30px 15px; border-radius: 16px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); cursor: pointer; position: relative; overflow: hidden; }
         .menu-item i { font-size: 2rem; display: block; margin-bottom: 10px; }
         .menu-item span { font-weight: bold; font-size: 1rem; }
+        
+        /* 준비중 스타일 */
+        .menu-item.disabled { opacity: 0.5; background: #f8fafc; }
+        .menu-item.disabled::after { content: "준비중"; position: absolute; top: 10px; right: -20px; background: var(--secondary); color: white; font-size: 0.6rem; padding: 2px 20px; transform: rotate(45deg); }
+
         .page-section { display: none; }
         #login-section { display: block; padding-top: 50px; }
         #spec-section { display: none; margin-top: 10px; padding: 10px; background: #f8fafc; border-radius: 8px; }
@@ -50,10 +57,18 @@
             <button onclick="location.reload()" style="font-size:0.75rem; color:red; background:none;">로그아웃</button>
         </div>
         <div class="menu-grid">
-            <div class="menu-item" onclick="showPage('t5-section')"><i>💡</i><span>T5 계산기</span></div>
-            <div class="menu-item" onclick="showPage('worklog-section')"><i>📝</i><span>작업일보</span></div>
-            <div class="menu-item" onclick="showPage('grout-section')"><i>🎨</i><span>줄눈 계산기</span></div>
-            <div class="menu-item" onclick="alert('준비 중인 기능입니다.')"><i>🛠️</i><span>공구 관리</span></div>
+            <div class="menu-item" onclick="showPage('t5-section')">
+                <i>💡</i><span>T5 계산기</span>
+            </div>
+            <div class="menu-item disabled" onclick="alert('서비스 준비중입니다.')">
+                <i>📝</i><span>작업일보</span>
+            </div>
+            <div class="menu-item disabled" onclick="alert('서비스 준비중입니다.')">
+                <i>🎨</i><span>줄눈 계산기</span>
+            </div>
+            <div class="menu-item disabled" onclick="alert('서비스 준비중입니다.')">
+                <i>🛠️</i><span>공구 관리</span>
+            </div>
         </div>
     </div>
 
@@ -78,32 +93,10 @@
         <div class="section-title">📋 최근 공유 히스토리</div>
         <div id="t5-history-list"></div>
     </div>
-
-    <div id="worklog-section" class="page-section">
-        <button class="btn-home" onclick="showPage('dashboard-section')">⬅ 홈으로</button>
-        <h3>📝 작업일보</h3>
-        <div class="card">
-            <input type="date" id="logDate">
-            <input type="text" id="logWorker" placeholder="작업자 명단">
-            <textarea id="logContent" rows="4" placeholder="작업 내용 요약"></textarea>
-            <button class="btn-main" style="background:var(--success);" onclick="saveWorkLog()">작보 저장하기</button>
-        </div>
-        <div id="worklog-list"></div>
-    </div>
-    <div id="grout-section" class="page-section">
-        <button class="btn-home" onclick="showPage('dashboard-section')">⬅ 홈으로</button>
-        <h3>🎨 줄눈 소요량 계산</h3>
-        <div class="card">
-            <input type="number" id="tileW" placeholder="타일 가로 (mm)" value="600">
-            <input type="number" id="tileH" placeholder="타일 세로 (mm)" value="600">
-            <input type="number" id="areaSize" placeholder="시공 면적 (㎡)">
-            <button class="btn-main" onclick="calcGrout()">계산하기</button>
-        </div>
-        <div id="grout-result" class="card" style="display:none; background:#e0f2fe;"></div>
-    </div>
 </div>
 
 <script>
+    // [준호님 Firebase 설정]
     const firebaseConfig = {
         apiKey: "AIzaSyDjvv8ezS7OJgfwEfEh8Xwou9_bW7jzJ3w",
         authDomain: "kimmoksu-35d62.firebaseapp.com",
@@ -117,14 +110,13 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     let currentTeam = null;
-    let editingT5Id = null; // 수정 중인 문서 ID 보관용
+    let editingT5Id = null;
 
     function showPage(pageId) {
         document.querySelectorAll('.page-section').forEach(s => s.style.display = 'none');
         document.getElementById(pageId).style.display = 'block';
         window.scrollTo(0, 0);
         if(pageId === 't5-section') listenT5History();
-        if(pageId === 'worklog-section') listenWorkLog();
     }
 
     function toggleSpecSection() {
@@ -201,13 +193,11 @@
     async function saveT5ToCloud() {
         if(!lastT5Data) return;
         if(editingT5Id) {
-            // [덮어쓰기 로직]
             await db.collection("t5_history").doc(editingT5Id).update(lastT5Data);
-            alert("기존 데이터에 덮어씌웠습니다.");
+            alert("덮어씌우기 완료");
         } else {
-            // [새로 저장 로직]
             await db.collection("t5_history").add(lastT5Data);
-            alert("새로운 데이터로 저장되었습니다.");
+            alert("저장 완료");
         }
         resetT5();
     }
@@ -233,7 +223,7 @@
                         <button class="btn-del" onclick="deleteHistory('${doc.id}')">삭제</button>
                     </div>
                 </div>`;
-            }).join('') || "저장 내역 없음";
+            }).join('') || "내역 없음";
         });
     }
 
@@ -241,41 +231,19 @@
         const doc = await db.collection("t5_history").doc(id).get();
         if(!doc.exists) return;
         const d = doc.data();
-        if(!confirm("이 데이터를 수정하시겠습니까? (저장 시 기존 데이터가 바뀝니다)")) return;
-        
-        editingT5Id = id; // 현재 수정 중인 문서 ID 기억
+        if(!confirm("이 데이터를 수정하시겠습니까?")) return;
+        editingT5Id = id;
         document.getElementById('siteName').value = d.site;
         document.getElementById('spec-list').innerHTML = '';
         d.specs.forEach(s => addSpecRow(s.name, s.size));
         document.getElementById('area-list').innerHTML = '';
         d.areas.forEach(a => addAreaRow(a.name, a.len));
-        
         window.scrollTo({top: 0, behavior: 'smooth'});
-        alert("수정 모드입니다. 내용을 고친 후 아래 [계산] -> [덮어쓰기]를 누르세요.");
+        alert("수정 모드입니다.");
     }
 
     async function deleteHistory(id) {
-        if(confirm("정말 삭제할까요?")) await db.collection("t5_history").doc(id).delete();
-    }
-
-    // 작업일보/줄눈 (동일)
-    async function saveWorkLog() {
-        const d = { date: document.getElementById('logDate').value, worker: document.getElementById('logWorker').value, content: document.getElementById('logContent').value, teamId: currentTeam, createdAt: Date.now() };
-        if(!d.content) return;
-        await db.collection("worklogs").add(d);
-        alert("저장됨");
-        document.getElementById('logContent').value = '';
-    }
-    function listenWorkLog() {
-        db.collection("worklogs").where("teamId","==",currentTeam).orderBy("createdAt","desc").limit(10).onSnapshot(ss => {
-            document.getElementById('worklog-list').innerHTML = ss.docs.map(doc => `<div class="history-item"><strong>${doc.data().date}</strong>: ${doc.data().content}</div>`).join('');
-        });
-    }
-    function calcGrout() {
-        const w = document.getElementById('tileW').value, h = document.getElementById('tileH').value, a = document.getElementById('areaSize').value;
-        const res = (a * ((parseFloat(w)+parseFloat(h))/(w*h)) * 2 * 5 * 1.6 / 1000).toFixed(2);
-        document.getElementById('grout-result').innerHTML = `약 ${res}kg 필요`;
-        document.getElementById('grout-result').style.display = 'block';
+        if(confirm("삭제할까요?")) await db.collection("t5_history").doc(id).delete();
     }
 </script>
 </body>
