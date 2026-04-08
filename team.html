@@ -17,24 +17,24 @@
 
     <div id="create-team-area" class="card" style="display:none;">
         <div class="section-title">새 팀 만들기</div>
-        <input type="text" id="newTeamName" placeholder="팀 이름을 지어주세요">
+        <input type="text" id="newTeamName" placeholder="팀 이름을 입력하세요">
         <button class="btn-main" onclick="createNewTeam()">팀 생성하기</button>
     </div>
 
     <div id="manage-team-area" class="card" style="display:none;">
-        <div class="section-title" style="margin-bottom:10px;">
-            우리 팀: <span id="currentTeamName" style="color:var(--primary);"></span>
-            <button id="editTeamNameBtn" style="font-size:0.7rem; background:#4b5563; color:white; padding:4px 10px; border-radius:8px; border:none; display:none;" onclick="toggleEditTeamName()">수정</button>
+        <div class="section-title">
+            <span>팀: <span id="currentTeamName" style="color:var(--primary);"></span></span>
+            <button id="editTeamNameBtn" style="font-size:0.75rem; background:#4b5563; color:white; padding:4px 10px; border-radius:8px; display:none;" onclick="toggleEditTeamName()">이름 수정</button>
         </div>
         
-        <div id="edit-name-box" style="display:none; gap:8px; margin-bottom:20px;">
+        <div id="edit-name-box" style="display:none; gap:8px; margin-bottom:15px;">
             <input type="text" id="editTeamNameInput" style="margin-bottom:0; flex:1;">
-            <button onclick="updateTeamName()" style="background:var(--success); color:white; padding:0 15px; border-radius:12px; border:none;">저장</button>
+            <button onclick="updateTeamName()" style="background:var(--success); color:white; padding:0 15px; border-radius:12px;">저장</button>
         </div>
 
-        <div style="display:flex; gap:8px; margin-bottom:25px; margin-top:20px;">
-            <input type="email" id="inviteEmail" placeholder="팀원 이메일" style="margin-bottom:0;">
-            <button onclick="inviteMember()" style="padding:0 15px; background:var(--primary); color:white; border-radius:12px; border:none;">초대</button>
+        <div style="display:flex; gap:8px; margin-bottom:20px;">
+            <input type="email" id="inviteEmail" placeholder="초대할 팀원 이메일" style="margin-bottom:0;">
+            <button onclick="inviteMember()" style="padding:0 15px; background:var(--primary); color:white; border-radius:12px;">초대</button>
         </div>
         <div id="member-list-area"></div>
     </div>
@@ -54,28 +54,18 @@
         myTeamId = doc.id;
         const d = doc.data();
         const isLeader = (d.leader === myEmail);
-        
         document.getElementById('manage-team-area').style.display='block';
         document.getElementById('currentTeamName').innerText = d.teamName;
         document.getElementById('editTeamNameInput').value = d.teamName;
-        
-        // 팀장만 수정 가능하도록 버튼 노출
         if(isLeader) document.getElementById('editTeamNameBtn').style.display = 'inline-block';
         
-        let html = `<strong style="display:block; margin-bottom:15px;">멤버 명단 (${d.members.length}명)</strong>`;
+        let html = `<strong style="display:block; margin-bottom:12px;">멤버 명단 (${d.members.length}명)</strong>`;
         for(const email of d.members) {
             const uDoc = await db.collection("users").doc(email).get();
             const nickname = uDoc.exists ? uDoc.data().nickname : email.split('@')[0];
-            const isTargetLeader = (email === d.leader);
-
-            html += `<div style="display:flex; justify-content:space-between; align-items:center; background:#2d3748; padding:15px; border-radius:15px; margin-bottom:12px;">
-                <div>
-                    <span style="font-weight:bold;">${nickname} ${isTargetLeader ? '👑' : ''}</span><br>
-                    <small style="color:#9ca3af; font-size:0.7rem;">${email}</small>
-                </div>
-                ${isLeader && email !== myEmail ? `
-                    <button onclick="delegateLeader('${email}')" style="color:var(--primary); border:1px solid var(--primary); font-size:0.75rem; padding:5px 10px; border-radius:8px; background:none;">위임</button>
-                ` : ''}
+            html += `<div style="display:flex; justify-content:space-between; align-items:center; background:#2d3748; padding:12px; border-radius:12px; margin-bottom:8px;">
+                <div><span style="font-weight:bold;">${nickname} ${email === d.leader ? '👑' : ''}</span><br><small style="color:#9ca3af; font-size:0.7rem;">${email}</small></div>
+                ${isLeader && email !== myEmail ? `<button onclick="delegateLeader('${email}')" style="color:var(--primary); border:1px solid var(--primary); font-size:0.7rem; padding:3px 6px; border-radius:5px; background:none;">위임</button>` : ''}
             </div>`;
         }
         document.getElementById('member-list-area').innerHTML = html;
@@ -89,11 +79,8 @@
     async function updateTeamName() {
         const newName = document.getElementById('editTeamNameInput').value.trim();
         if(!newName) return;
-        try {
-            await db.collection("teams").doc(myTeamId).update({ teamName: newName });
-            alert("팀 이름이 변경되었습니다!");
-            location.reload();
-        } catch(e) { alert(e.message); }
+        await db.collection("teams").doc(myTeamId).update({ teamName: newName });
+        location.reload();
     }
 
     async function createNewTeam() {
@@ -111,7 +98,7 @@
     }
 
     async function delegateLeader(newLeader) {
-        if(confirm("팀장 자리를 넘기시겠습니까?")) {
+        if(confirm("팀장을 위임할까요?")) {
             await db.collection("teams").doc(myTeamId).update({ leader: newLeader });
             location.reload();
         }
