@@ -72,7 +72,7 @@
                 </div>
                 <div style="display:flex; gap:5px;">
                     ${isLeader && email !== myEmail ? `
-                        <button onclick="delegateLeader('${email}')" style="color:var(--primary); border:1px solid var(--primary); font-size:0.75rem; padding:5px 10px; border-radius:8px; background:none;">위임</button>
+                        <button onclick="delegateLeader('${email}')" style="color:var(--primary); border:1px solid var(--primary); font-size:0.75rem; padding:5px 10px; border-radius:8px; background:none;">팀장위임</button>
                         <button onclick="removeMember('${email}')" style="color:var(--danger); border:1px solid var(--danger); font-size:0.75rem; padding:5px 10px; border-radius:8px; background:none;">제외</button>
                     ` : ''}
                 </div>
