@@ -11,8 +11,11 @@
 </head>
 <body>
 <div class="container">
-    <div class="logo-wrapper">
-        <img src="kimmoksu_main_logo.png" alt="김목수이야기" class="main-logo">
+    
+    <div id="login-box">
+        <div class="logo-wrapper">
+            <img src="kimmoksu_main_logo.png" alt="김목수이야기" class="main-logo">
+        </div>
         <div class="card">
             <input type="text" id="teamId" placeholder="팀 아이디">
             <input type="password" id="teamPw" placeholder="비밀번호">
@@ -23,7 +26,7 @@
     <div id="dashboard-box" style="display:none;">
         <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h3 id="displayTeamName" style="margin:0; color:var(--primary);"></h3>
-            <button onclick="logout()" style="font-size:0.75rem; color:red; background:none; border:none;">로그아웃</button>
+            <button onclick="logout()" style="font-size:0.75rem; color:var(--danger); background:none; border:none; cursor:pointer;">로그아웃</button>
         </div>
         <div class="menu-grid">
             <div class="menu-item" onclick="location.href='t5.html'"><i>💡</i><span>T5 계산기</span></div>
@@ -32,41 +35,40 @@
             <div class="menu-item disabled" onclick="alert('서비스 준비중입니다.')"><i>🛠️</i><span>공구 관리</span></div>
         </div>
     </div>
+
 </div>
 
 <script>
-    const savedTeam = localStorage.getItem('teamId');
-    if(savedTeam) {
-        showDashboard(savedTeam);
-    }
+    window.onload = function() {
+        const savedTeam = localStorage.getItem('teamId');
+        if(savedTeam) { showDashboard(savedTeam); }
+    };
 
     async function handleLogin() {
         const id = document.getElementById('teamId').value.trim();
         const pw = document.getElementById('teamPw').value.trim();
         if(!id || !pw) return alert("ID/PW를 입력하세요.");
-
-        const doc = await db.collection("teams").doc(id).get();
-        if(doc.exists) {
-            if(doc.data().pw !== pw) return alert("비밀번호가 틀립니다.");
-        } else {
-            if(confirm("신규 팀을 생성할까요?")) {
-                await db.collection("teams").doc(id).set({ pw: pw });
-            } else return;
-        }
-        localStorage.setItem('teamId', id);
-        showDashboard(id);
+        try {
+            const doc = await db.collection("teams").doc(id).get();
+            if(doc.exists) {
+                if(doc.data().pw !== pw) return alert("비밀번호가 틀립니다.");
+            } else {
+                if(confirm("신규 팀을 생성할까요?")) { await db.collection("teams").doc(id).set({ pw: pw }); } else return;
+            }
+            localStorage.setItem('teamId', id);
+            showDashboard(id);
+        } catch(e) { alert("연결 오류: firebase-config.js를 확인하세요."); }
     }
 
     function showDashboard(id) {
-        document.getElementById('login-box').style.display = 'none';
-        document.getElementById('dashboard-box').style.display = 'block';
+        const lBox = document.getElementById('login-box');
+        const dBox = document.getElementById('dashboard-box');
+        if(lBox) lBox.style.display = 'none';
+        if(dBox) dBox.style.display = 'block';
         document.getElementById('displayTeamName').innerText = `팀: ${id}`;
     }
 
-    function logout() {
-        localStorage.clear();
-        location.reload();
-    }
+    function logout() { localStorage.clear(); location.reload(); }
 </script>
 </body>
 </html>
