@@ -3,247 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>김목수이야기 - 현장 관리 포털</title>
+    <title>김목수이야기 - 홈</title>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
-    <style>
-        :root { --primary: #2563eb; --secondary: #64748b; --success: #10b981; --danger: #ef4444; --bg: #f1f5f9; --card: #ffffff; }
-        body { font-family: -apple-system, system-ui, sans-serif; background-color: var(--bg); margin: 0; padding: 0; color: #1e293b; }
-        .container { max-width: 500px; margin: auto; padding: 15px; box-sizing: border-box; }
-        .card { background: var(--card); padding: 15px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px; }
-        .section-title { font-weight: bold; font-size: 1rem; margin-bottom: 12px; display: flex; justify-content: space-between; border-bottom: 2px solid var(--bg); padding-bottom: 8px; align-items: center; }
-        input, select, textarea { padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; width: 100%; margin-bottom: 8px; }
-        button { border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        .btn-main { width: 100%; padding: 16px; background: var(--primary); color: white; font-size: 1.1rem; }
-        .btn-home { background: #eee; padding: 8px 12px; font-size: 0.8rem; margin-bottom: 10px; }
-        .btn-toggle { background: var(--secondary); color: white; width: 24px; height: 24px; border-radius: 50%; padding: 0; font-size: 1rem; line-height: 24px; }
-        
-        /* 대시보드 그리드 */
-        .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
-        .menu-item { background: white; padding: 30px 15px; border-radius: 16px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); cursor: pointer; position: relative; overflow: hidden; }
-        .menu-item i { font-size: 2rem; display: block; margin-bottom: 10px; }
-        .menu-item span { font-weight: bold; font-size: 1rem; }
-        
-        /* 준비중 스타일 */
-        .menu-item.disabled { opacity: 0.5; background: #f8fafc; }
-        .menu-item.disabled::after { content: "준비중"; position: absolute; top: 10px; right: -20px; background: var(--secondary); color: white; font-size: 0.6rem; padding: 2px 20px; transform: rotate(45deg); }
-
-        .page-section { display: none; }
-        #login-section { display: block; padding-top: 50px; }
-        #spec-section { display: none; margin-top: 10px; padding: 10px; background: #f8fafc; border-radius: 8px; }
-        .spec-row, .area-row { display: flex; gap: 8px; margin-bottom: 8px; }
-        .input-name { flex: 2; } .input-val { flex: 1; text-align: center; }
-        .history-item { background: #fff; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 0.85rem; }
-        .history-btns { display: flex; gap: 8px; margin-top: 10px; }
-        .btn-edit { background: #e0f2fe; color: var(--primary); flex: 1; padding: 10px; }
-        .btn-del { background: #fee2e2; color: var(--danger); flex: 1; padding: 10px; }
-    </style>
+    <script src="firebase-config.js"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
 <div class="container">
-    <div id="login-section" class="page-section">
+    <div id="login-box">
         <h2 style="text-align: center; margin-bottom: 30px;">🏗️ 김목수이야기</h2>
         <div class="card">
             <input type="text" id="teamId" placeholder="팀 아이디">
             <input type="password" id="teamPw" placeholder="비밀번호">
-            <button class="btn-main" onclick="handleLogin()">접속하기 / 팀 생성</button>
+            <button class="btn-main" onclick="handleLogin()">접속하기</button>
         </div>
     </div>
 
-    <div id="dashboard-section" class="page-section">
+    <div id="dashboard-box" style="display:none;">
         <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h3 id="displayTeamName" style="margin:0; color:var(--primary);"></h3>
-            <button onclick="location.reload()" style="font-size:0.75rem; color:red; background:none;">로그아웃</button>
+            <button onclick="logout()" style="font-size:0.75rem; color:red; background:none; border:none;">로그아웃</button>
         </div>
         <div class="menu-grid">
-            <div class="menu-item" onclick="showPage('t5-section')">
-                <i>💡</i><span>T5 계산기</span>
-            </div>
-            <div class="menu-item disabled" onclick="alert('서비스 준비중입니다.')">
-                <i>📝</i><span>작업일보</span>
-            </div>
-            <div class="menu-item disabled" onclick="alert('서비스 준비중입니다.')">
-                <i>🎨</i><span>줄눈 계산기</span>
-            </div>
-            <div class="menu-item disabled" onclick="alert('서비스 준비중입니다.')">
-                <i>🛠️</i><span>공구 관리</span>
-            </div>
+            <div class="menu-item" onclick="location.href='t5.html'"><i>💡</i><span>T5 계산기</span></div>
+            <div class="menu-item disabled" onclick="alert('서비스 준비중입니다.')"><i>📝</i><span>작업일보</span></div>
+            <div class="menu-item disabled" onclick="alert('서비스 준비중입니다.')"><i>🎨</i><span>줄눈 계산기</span></div>
+            <div class="menu-item disabled" onclick="alert('서비스 준비중입니다.')"><i>🛠️</i><span>공구 관리</span></div>
         </div>
-    </div>
-
-    <div id="t5-section" class="page-section">
-        <button class="btn-home" onclick="resetT5(); showPage('dashboard-section');">⬅ 홈으로</button>
-        <h3>💡 T5 발주 계산기</h3>
-        <div class="card">
-            <div class="section-title">제품 규격 설정 <button id="specToggleBtn" class="btn-toggle" onclick="toggleSpecSection()">+</button></div>
-            <div id="spec-section">
-                <div id="spec-list"></div>
-                <button onclick="addSpecRow()" style="width:100%; padding:5px; background:#eee; font-size:0.8rem;">+ 규격 추가</button>
-            </div>
-        </div>
-        <div class="card">
-            <div class="section-title">실측 길이 입력 (mm) <button onclick="addAreaRow()" style="font-size:0.7rem; background:#eee; padding:2px 8px;">+ 추가</button></div>
-            <input type="text" id="siteName" placeholder="현장/부위 명칭">
-            <div id="area-list"></div>
-            <button class="btn-main" onclick="runT5Calc()">1. 계산하기</button>
-        </div>
-        <div id="t5-result-area" style="display:none;" class="card"></div>
-        <button class="btn-main" id="t5-save-btn" style="display:none; background:var(--success); margin-bottom:20px;" onclick="saveT5ToCloud()">2. 저장하기</button>
-        <div class="section-title">📋 최근 공유 히스토리</div>
-        <div id="t5-history-list"></div>
     </div>
 </div>
 
 <script>
-    // [준호님 Firebase 설정]
-    const firebaseConfig = {
-        apiKey: "AIzaSyDjvv8ezS7OJgfwEfEh8Xwou9_bW7jzJ3w",
-        authDomain: "kimmoksu-35d62.firebaseapp.com",
-        projectId: "kimmoksu-35d62",
-        storageBucket: "kimmoksu-35d62.firebasestorage.app",
-        messagingSenderId: "104444016578",
-        appId: "1:104444016578:web:09f9feeb61bf78ef23c85b",
-        measurementId: "G-W7QBSQTX3J"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    let currentTeam = null;
-    let editingT5Id = null;
-
-    function showPage(pageId) {
-        document.querySelectorAll('.page-section').forEach(s => s.style.display = 'none');
-        document.getElementById(pageId).style.display = 'block';
-        window.scrollTo(0, 0);
-        if(pageId === 't5-section') listenT5History();
-    }
-
-    function toggleSpecSection() {
-        const sec = document.getElementById('spec-section');
-        const btn = document.getElementById('specToggleBtn');
-        const isOpen = sec.style.display === 'block';
-        sec.style.display = isOpen ? 'none' : 'block';
-        btn.innerText = isOpen ? '+' : '-';
+    const savedTeam = localStorage.getItem('teamId');
+    if(savedTeam) {
+        showDashboard(savedTeam);
     }
 
     async function handleLogin() {
         const id = document.getElementById('teamId').value.trim();
         const pw = document.getElementById('teamPw').value.trim();
         if(!id || !pw) return alert("ID/PW를 입력하세요.");
+
         const doc = await db.collection("teams").doc(id).get();
         if(doc.exists) {
-            if(doc.data().pw !== pw) return alert("비번 불일치");
+            if(doc.data().pw !== pw) return alert("비밀번호가 틀립니다.");
         } else {
-            if(confirm("신규 팀을 만들까요?")) await db.collection("teams").doc(id).set({ pw: pw }); else return;
+            if(confirm("신규 팀을 생성할까요?")) {
+                await db.collection("teams").doc(id).set({ pw: pw });
+            } else return;
         }
-        currentTeam = id;
+        localStorage.setItem('teamId', id);
+        showDashboard(id);
+    }
+
+    function showDashboard(id) {
+        document.getElementById('login-box').style.display = 'none';
+        document.getElementById('dashboard-box').style.display = 'block';
         document.getElementById('displayTeamName').innerText = `팀: ${id}`;
-        showPage('dashboard-section');
     }
 
-    function addSpecRow(n='', s='') {
-        const div = document.createElement('div'); div.className = 'spec-row';
-        div.innerHTML = `<input type="text" class="input-name" value="${n}"><input type="number" class="input-val" value="${s}"><button onclick="this.parentElement.remove()" style="color:red; background:none;">X</button>`;
-        document.getElementById('spec-list').appendChild(div);
-    }
-    function addAreaRow(n='', v='') {
-        const div = document.createElement('div'); div.className = 'area-row';
-        div.innerHTML = `<input type="text" class="input-name" placeholder="구간" value="${n}"> <input type="number" class="input-val" placeholder="길이" value="${v}">`;
-        document.getElementById('area-list').appendChild(div);
-    }
-    function loadT5Specs() {
-        const d = [{"n":"1200","s":1190},{"n":"900","s":890},{"n":"600","s":590},{"n":"400","s":385},{"n":"300","s":330}];
-        document.getElementById('spec-list').innerHTML = '';
-        d.forEach(x => addSpecRow(x.n, x.s));
-    }
-    loadT5Specs(); addAreaRow();
-
-    let lastT5Data = null;
-    function runT5Calc() {
-        const site = document.getElementById('siteName').value || "현장";
-        const specs = Array.from(document.querySelectorAll('#spec-list .spec-row')).map(r => ({
-            name: r.querySelectorAll('input')[0].value,
-            size: parseFloat(r.querySelectorAll('input')[1].value)
-        })).filter(x => x.size > 0).sort((a,b) => b.size - a.size);
-        const areas = Array.from(document.querySelectorAll('#area-list .area-row')).map(r => ({
-            name: r.querySelectorAll('input')[0].value || "구간",
-            len: parseFloat(r.querySelectorAll('input')[1].value)
-        })).filter(x => x.len > 0);
-
-        if(areas.length === 0) return alert("실측 길이를 넣으세요.");
-        let grandTotal = {}, html = `<strong>📍 ${site}</strong><hr>`;
-        areas.forEach(a => {
-            let temp = a.len - 50, counts = [];
-            specs.forEach(s => {
-                let c = Math.floor(temp / s.size);
-                if(c > 0) { counts.push(`${s.name}-${c}개`); grandTotal[s.name] = (grandTotal[s.name] || 0) + c; temp -= s.size * c; }
-            });
-            html += `• ${a.name}: ${counts.join(', ') || '없음'} (남음:${temp.toFixed(0)}mm)<br>`;
-        });
-        lastT5Data = { site, specs, areas, grandTotal, teamId: currentTeam, createdAt: Date.now() };
-        document.getElementById('t5-result-area').innerHTML = html + `<br><strong>합계: ${Object.entries(grandTotal).map(([k,v])=>`${k}-${v}개`).join('/')}</strong>`;
-        document.getElementById('t5-result-area').style.display = 'block';
-        
-        const saveBtn = document.getElementById('t5-save-btn');
-        saveBtn.style.display = 'block';
-        saveBtn.innerText = editingT5Id ? "2. 수정 내용 덮어쓰기 💾" : "2. 우리 팀 히스토리에 저장 🌐";
-    }
-
-    async function saveT5ToCloud() {
-        if(!lastT5Data) return;
-        if(editingT5Id) {
-            await db.collection("t5_history").doc(editingT5Id).update(lastT5Data);
-            alert("덮어씌우기 완료");
-        } else {
-            await db.collection("t5_history").add(lastT5Data);
-            alert("저장 완료");
-        }
-        resetT5();
-    }
-
-    function resetT5() {
-        editingT5Id = null;
-        document.getElementById('siteName').value = '';
-        document.getElementById('area-list').innerHTML = '';
-        addAreaRow();
-        document.getElementById('t5-result-area').style.display = 'none';
-        document.getElementById('t5-save-btn').style.display = 'none';
-        loadT5Specs();
-    }
-
-    function listenT5History() {
-        db.collection("t5_history").where("teamId","==",currentTeam).orderBy("createdAt","desc").limit(15).onSnapshot(ss => {
-            document.getElementById('t5-history-list').innerHTML = ss.docs.map(doc => {
-                const d = doc.data();
-                return `<div class="history-item">
-                    <strong>${d.site}</strong><br>${Object.entries(d.grandTotal).map(([k,v])=>`${k}-${v}개`).join(', ')}
-                    <div class="history-btns">
-                        <button class="btn-edit" onclick="loadT5ToEdit('${doc.id}')">수정하기</button>
-                        <button class="btn-del" onclick="deleteHistory('${doc.id}')">삭제</button>
-                    </div>
-                </div>`;
-            }).join('') || "내역 없음";
-        });
-    }
-
-    async function loadT5ToEdit(id) {
-        const doc = await db.collection("t5_history").doc(id).get();
-        if(!doc.exists) return;
-        const d = doc.data();
-        if(!confirm("이 데이터를 수정하시겠습니까?")) return;
-        editingT5Id = id;
-        document.getElementById('siteName').value = d.site;
-        document.getElementById('spec-list').innerHTML = '';
-        d.specs.forEach(s => addSpecRow(s.name, s.size));
-        document.getElementById('area-list').innerHTML = '';
-        d.areas.forEach(a => addAreaRow(a.name, a.len));
-        window.scrollTo({top: 0, behavior: 'smooth'});
-        alert("수정 모드입니다.");
-    }
-
-    async function deleteHistory(id) {
-        if(confirm("삭제할까요?")) await db.collection("t5_history").doc(id).delete();
+    function logout() {
+        localStorage.clear();
+        location.reload();
     }
 </script>
 </body>
