@@ -37,9 +37,8 @@
     auth.onAuthStateChanged(async (user) => {
         if (user) {
             userEmail = user.email;
-            // 현재 닉네임 미리 불러와서 넣어두기
             const userDoc = await db.collection("users").doc(userEmail).get();
-            if (userDoc.exists) {
+            if (userDoc.exists && userDoc.data().nickname) {
                 document.getElementById('newNick').value = userDoc.data().nickname;
             }
         } else {
@@ -47,40 +46,40 @@
         }
     });
 
-    // 닉네임 업데이트 함수
+    // 닉네임 업데이트 (에러 방지 버전)
     async function updateNickname() {
         const nick = document.getElementById('newNick').value.trim();
         if (!nick) return alert("닉네임을 입력해주세요.");
 
         try {
-            await db.collection("users").doc(userEmail).update({
-                nickname: nick
-            });
-            alert("닉네임이 변경되었습니다!");
+            // .update 대신 .set과 { merge: true }를 사용합니다.
+            // 이렇게 하면 문서가 없으면 새로 만들고, 있으면 닉네임만 쏙 바꿉니다.
+            await db.collection("users").doc(userEmail).set({
+                nickname: nick,
+                email: userEmail
+            }, { merge: true });
+
+            alert("닉네임이 성공적으로 저장되었습니다!");
             location.href = 'index.html';
         } catch (e) {
             alert("변경 실패: " + e.message);
         }
     }
 
-    // 비밀번호 업데이트 함수
     async function updatePassword() {
         const pw = document.getElementById('newPw').value;
         const confirm = document.getElementById('confirmPw').value;
-
         if (pw.length < 6) return alert("비밀번호는 6자리 이상이어야 합니다.");
         if (pw !== confirm) return alert("비밀번호가 일치하지 않습니다.");
 
         try {
-            const user = auth.currentUser;
-            await user.updatePassword(pw);
-            alert("비밀번호가 성공적으로 변경되었습니다. 다시 로그인해주세요.");
+            await auth.currentUser.updatePassword(pw);
+            alert("비밀번호가 변경되었습니다. 다시 로그인해주세요.");
             await auth.signOut();
             location.href = 'index.html';
         } catch (e) {
-            // 최근에 로그인하지 않았을 경우 보안상 에러가 날 수 있음
             if (e.code === 'auth/requires-recent-login') {
-                alert("보안을 위해 다시 로그인한 직후에만 비번 변경이 가능합니다. 로그아웃 후 다시 로그인해주세요.");
+                alert("보안을 위해 다시 로그인한 직후에만 변경 가능합니다.");
             } else {
                 alert("실패: " + e.message);
             }
