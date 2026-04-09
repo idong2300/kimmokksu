@@ -46,7 +46,7 @@
         </div>
         <div class="menu-grid">
             <div class="menu-item" onclick="location.href='t5.html'"><i>💡</i><span>T5 계산기</span></div>
-            <div class="menu-item disabled" onclick="alert('준비중')"><i>📝</i><span>작업일보</span></div>
+            <div class="menu-item" onclick="location.href='monthly_log.html'"><i>📝</i><span>작업일보</span></div>
             <div class="menu-item disabled" onclick="alert('준비중')"><i>🎨</i><span>줄눈 계산기</span></div>
             <div class="menu-item disabled" onclick="alert('준비중')"><i>🛠️</i><span>공구 관리</span></div>
         </div>
@@ -59,7 +59,10 @@
             const userDoc = await db.collection("users").doc(user.email).get();
             const nick = userDoc.exists ? userDoc.data().nickname : user.email.split('@')[0];
             showDashboard(nick);
-        } else { document.getElementById('auth-box').style.display='block'; document.getElementById('dashboard-box').style.display='none'; }
+        } else { 
+            document.getElementById('auth-box').style.display='block'; 
+            document.getElementById('dashboard-box').style.display='none'; 
+        }
     });
     function toggleDropdown(e) { e.stopPropagation(); document.getElementById("myDropdown").classList.toggle("show"); }
     window.onclick = () => { const d = document.getElementById("myDropdown"); if(d && d.classList.contains('show')) d.classList.remove('show'); }
