@@ -188,14 +188,14 @@
         if(!site) return alert("현장명을 입력하세요.");
         try {
             const data = { teamId: myTeamId, month, site, teamData, updatedAt: Date.now() };
-            if(editingId) await db.collection("monthly_logs").doc(editingId).set(data);
-            else await db.collection("monthly_logs").add(data);
+            if(editingId) await db.collection("logs_test").doc(editingId).set(data);
+            else await db.collection("logs_test").add(data);
             alert("저장되었습니다."); location.reload();
         } catch(e) { alert(e.message); }
     }
 
     function loadHistory() {
-        db.collection("monthly_logs").where("teamId","==", myTeamId).orderBy("updatedAt","desc").limit(10).onSnapshot(ss => {
+        db.collection("logs_test").where("teamId","==", myTeamId).orderBy("updatedAt","desc").limit(10).onSnapshot(ss => {
             document.getElementById('history-list').innerHTML = ss.docs.map(doc => {
                 const d = doc.data();
                 return `
@@ -217,7 +217,7 @@
     }
 
     async function editLog(id) {
-        const doc = await db.collection("monthly_logs").doc(id).get();
+        const doc = await db.collection("logs_test").doc(id).get();
         const d = doc.data(); editingId = id;
         document.getElementById('logMonth').value = d.month;
         document.getElementById('siteName').value = d.site;
@@ -226,7 +226,7 @@
         alert("데이터를 불러왔습니다.");
     }
 
-    async function deleteLog(id) { if(confirm("정말 삭제할까요?")) await db.collection("monthly_logs").doc(id).delete(); }
+    async function deleteLog(id) { if(confirm("정말 삭제할까요?")) await db.collection("logs_test").doc(id).delete(); }
     
     // [임시] 엑셀 저장 기능 (UI만 구현)
     function exportToExcel(id) {
