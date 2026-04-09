@@ -11,7 +11,6 @@
     <script src="firebase-config.js"></script>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* 기존 스타일 동일 */
         .team-section { margin-bottom: 35px; }
         .team-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 2px solid var(--primary); padding-bottom: 8px; }
         .team-title { font-weight: bold; font-size: 1.1rem; color: var(--text); }
@@ -22,7 +21,7 @@
         .name-input { width: 95%; border: none; background: transparent; color: white; text-align: center; font-weight: bold; font-size: 0.85rem; resize: none; outline: none; }
         .date-num { background: #2d3748; font-size: 0.75rem; font-weight: bold; color: #d1d5db; }
         .sun { color: #ff4d4d !important; } .sat { color: #4dadff !important; }
-        .gongsu-cell { cursor: pointer; font-weight: bold; font-size: 0.9rem; }
+        .gongsu-cell { cursor: pointer; font-weight: bold; font-size: 0.9rem; -webkit-user-select: none; user-select: none; }
         .gongsu-cell.filled { color: var(--success); background: rgba(16, 185, 129, 0.1); }
         .team-total-bar { text-align: right; padding: 12px; font-size: 0.95rem; color: #f3f4f6; background: rgba(59, 130, 246, 0.1); border-radius: 10px; border: 1px solid rgba(59, 130, 246, 0.2); }
         .history-card { background: var(--card); border-radius: 15px; padding: 18px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.05); position: relative; }
@@ -51,7 +50,6 @@
 </div>
 
 <script>
-    // [기존 스크립트 로직 유지...]
     let myEmail, myTeamId, editingId = null, userNickname = "";
     let teamData = [{ teamName: "목공팀", workers: [] }, { teamName: "도장팀", workers: [] }];
 
@@ -91,6 +89,7 @@
             }).join('');
             return `<div class="team-section"><div class="team-header"><span class="team-title">${team.teamName}</span><button class="btn-circle" onclick="addWorker(${tIdx})">+</button></div>${tables}<div class="team-total-bar">${team.teamName} 합계 공수: <b>${teamTotal % 1 === 0 ? teamTotal : teamTotal.toFixed(1)}</b></div></div>`;
         }).join('');
+        bindLongPress();
     }
 
     function loopDays(y, m, start, end, type, tIdx, wIdx, lastDay = 31) {
@@ -102,7 +101,7 @@
                 if (isInvalid) html += `<td style="background:#111827;"></td>`;
                 else {
                     const val = teamData[tIdx].workers[wIdx].days[d] || "";
-                    html += `<td class="gongsu-cell ${val?'filled':''}" onclick="handleCellClick(this, ${tIdx}, ${wIdx}, ${d})">${val}</td>`;
+                    html += `<td class="gongsu-cell ${val?'filled':''}" data-t="${tIdx}" data-w="${wIdx}" data-d="${d}" onclick="handleCellClick(this)">${val}</td>`;
                 }
             }
         }
@@ -114,7 +113,31 @@
     function addWorker(tIdx) { teamData[tIdx].workers.push({ name: "", days: {} }); renderAllTeams(); }
     function removeWorker(tIdx, wIdx) { teamData[tIdx].workers.splice(wIdx, 1); renderAllTeams(); }
     function updateName(tIdx, wIdx, val) { teamData[tIdx].workers[wIdx].name = val; }
-    function handleCellClick(el, t, w, d) { const current = parseFloat(teamData[t].workers[w].days[d] || 0); teamData[t].workers[w].days[d] = (current === 1 ? "" : 1.0); renderAllTeams(); }
+    
+    // 단순 클릭 시 1 <-> 공백 토글
+    function handleCellClick(el) {
+        const { t, w, d } = el.dataset;
+        const current = parseFloat(teamData[t].workers[w].days[d] || 0);
+        teamData[t].workers[w].days[d] = (current === 1 ? "" : 1);
+        renderAllTeams();
+    }
+
+    // [복구] 롱클릭 시 소수점 등 직접 입력
+    function bindLongPress() {
+        document.querySelectorAll('.gongsu-cell').forEach(cell => {
+            let timer;
+            const start = () => timer = setTimeout(() => {
+                const { t, w, d } = cell.dataset;
+                const input = prompt(`${teamData[t].workers[w].name || '작업자'} - ${d}일 공수 직접 입력`, teamData[t].workers[w].days[d]);
+                if (input !== null) { 
+                    teamData[t].workers[w].days[d] = (input === "0" ? "" : input); 
+                    renderAllTeams(); 
+                }
+            }, 700);
+            cell.onmousedown = cell.ontouchstart = start;
+            cell.onmouseup = cell.ontouchend = () => clearTimeout(timer);
+        });
+    }
 
     async function saveMonthlyLog() {
         const month = document.getElementById('logMonth').value;
@@ -141,7 +164,6 @@
     async function copyLog(id) { const doc = await db.collection("logs_test").doc(id).get(); const d = doc.data(); editingId = null; document.getElementById('logMonth').value = d.month; document.getElementById('siteName').value = d.site + " (복사)"; teamData = d.teamData; renderAllTeams(); window.scrollTo(0, 0); }
     async function deleteLog(id) { if(confirm("삭제?")) await db.collection("logs_test").doc(id).delete(); }
 
-    // [최종 마감] 엑셀 양식 및 스타일 고도화
     async function exportToExcel(id) {
         const doc = await db.collection("logs_test").doc(id).get();
         if(!doc.exists) return;
@@ -152,13 +174,12 @@
         const wb = XLSX.utils.book_new();
         const wsData = Array.from({ length: 4 }, () => Array(36).fill(""));
 
-        // 1. 제목 및 상단 정보 (셀 병합 활용)
+        // 제목 및 정보
         wsData[0][0] = `${year}년 ${monthNum}월 현장 작업 일보 (김목수이야기)`;
         wsData[1][0] = `현장명: ${data.site}`;
         wsData[1][12] = `기간: ${year}.${monthNum}.01 ~ ${monthNum}.${lastDayNum}`;
         wsData[1][30] = `작성자: ${data.writer || ""}`;
 
-        // 2. 헤더 구성
         const headerRow = ["NO", "공정", "이 름"];
         for(let d=1; d<=31; d++) headerRow.push(d);
         headerRow.push("계", "비고");
@@ -170,7 +191,6 @@
         data.teamData.forEach(team => {
             if(team.workers.length === 0) return;
             let teamStartR = curR + 1;
-
             team.workers.forEach(w => {
                 const row = Array(36).fill("");
                 row[0] = totalNo++;
@@ -181,41 +201,32 @@
                 wsData.push(row);
                 curR++;
             });
-
-            // 소계
             const sumRow = Array(36).fill("");
             sumRow[1] = team.teamName;
             sumRow[2] = "공정소계";
             sumRow[34] = { t: 'n', f: `SUM(AI${teamStartR}:AI${curR})` };
             wsData.push(sumRow);
-            curR += 2; // 공정 간 간격
+            curR += 2;
             wsData.push(Array(36).fill("")); 
         });
 
         const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-        // [셀 병합 처리]
         ws['!merges'] = [
-            { s: { r: 0, c: 0 }, e: { r: 0, c: 35 } }, // 제목 병합
-            { s: { r: 1, c: 0 }, e: { r: 1, c: 11 } }, // 현장명 구역
-            { s: { r: 1, c: 12 }, e: { r: 1, c: 29 } }, // 기간 구역
-            { s: { r: 1, c: 30 }, e: { r: 1, c: 35 } }  // 작성자 구역
+            { s: { r: 0, c: 0 }, e: { r: 0, c: 35 } },
+            { s: { r: 1, c: 0 }, e: { r: 1, c: 11 } },
+            { s: { r: 1, c: 12 }, e: { r: 1, c: 29 } },
+            { s: { r: 1, c: 30 }, e: { r: 1, c: 35 } }
         ];
 
-        // [컬럼 너비 설정] 날짜 칸 절반 축소 (wch: 2.2)
         ws['!cols'] = [
-            { wch: 4.5 }, // NO
-            { wch: 11 },  // 공정
-            { wch: 11 },  // 이름
-            ...Array(31).fill({ wch: 2.2 }), // 날짜 칸 팍 줄임
-            { wch: 7 },   // 계
-            { wch: 10 }   // 비고
+            { wch: 4.5 }, { wch: 11 }, { wch: 11 },
+            ...Array(31).fill({ wch: 2.2 }), // 날짜 너비 축소
+            { wch: 7 }, { wch: 10 }
         ];
 
-        // [행 높이 설정] 제목 3배 키움 (hpt: 60)
         ws['!rows'] = [
-            { hpt: 55 }, // 1행 제목 높이
-            { hpt: 25 }  // 2행 정보 높이
+            { hpt: 55 }, // 제목 행 높이 3배 유지
+            { hpt: 25 }
         ];
 
         XLSX.utils.book_append_sheet(wb, ws, "근무현황");
