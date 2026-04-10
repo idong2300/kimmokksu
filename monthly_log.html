@@ -59,7 +59,14 @@
 
 <script>
     let myEmail, myTeamId, editingId = null, userNickname = "";
-    let teamData = [{ teamName: "목공팀", workers: [] }];
+    
+    // [수정] 초기 팀 데이터를 목공, 도장, 전기, 필름으로 세팅
+    let teamData = [
+        { teamName: "목공팀", workers: [] },
+        { teamName: "도장팀", workers: [] },
+        { teamName: "전기팀", workers: [] },
+        { teamName: "필름팀", workers: [] }
+    ];
 
     document.getElementById('logMonth').value = new Date().toISOString().substring(0, 7);
 
