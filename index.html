@@ -29,6 +29,7 @@
             --card-bg: #2a2e39;
             --primary-accent: #5c7cfa; 
             --danger-btn: #e03131;
+            --success-btn: #0ca678; /* 카톡 복사용 초록색 */
         }
 
         body { background-color: var(--bg-deep); color: #f8fafc; font-family: 'Pretendard', sans-serif; margin: 0; overflow: hidden; }
@@ -65,7 +66,7 @@
         .t5-input-dark:focus { border-color: var(--primary-accent) !important; box-shadow: none !important; }
         .t5-input-dark::placeholder { color: #8b95a1 !important; opacity: 1 !important; }
 
-        .t5-btn-primary { background: var(--primary-accent); border: none; color: white; border-radius: 10px; padding: 14px; font-weight: bold; width: 100%; transition: 0.2s; }
+        .t5-btn-primary { background: var(--primary-accent); border: none; color: white; border-radius: 10px; padding: 14px; font-weight: bold; width: 100%; transition: 0.2s; cursor: pointer; }
         .t5-btn-primary:active { transform: scale(0.98); }
         .t5-btn-small { background: rgba(255,255,255,0.1); border: none; color: #ced4da; padding: 6px 12px; border-radius: 8px; font-size: 0.85rem; transition: 0.2s; cursor: pointer; }
         .t5-btn-small:hover { background: rgba(255,255,255,0.2); }
@@ -297,7 +298,6 @@
         bindLongPress();
     }
     
-    // [수정됨] 요일을 계산하여 토요일은 파란색, 일요일은 빨간색으로 표시하도록 변경
     function loopDays(y, m, start, end, type, tIdx, wIdx, lastDay = 31) { 
         let html = ""; 
         for (let d = start; d <= end; d++) { 
@@ -309,9 +309,8 @@
                     const dateObj = new Date(y, m - 1, d);
                     const dayOfWeek = dateObj.getDay();
                     let colorStyle = "";
-                    if (dayOfWeek === 0) colorStyle = "color: #ef4444;"; // 일요일 (빨강)
-                    else if (dayOfWeek === 6) colorStyle = "color: #5c7cfa;"; // 토요일 (파랑)
-                    
+                    if (dayOfWeek === 0) colorStyle = "color: #ef4444;"; 
+                    else if (dayOfWeek === 6) colorStyle = "color: #5c7cfa;"; 
                     html += `<td style="${colorStyle}">${d}</td>`;
                 }
             } else { 
@@ -393,14 +392,18 @@
         document.getElementById('t5-input-container').appendChild(div);
     }
 
+    // [수정됨] 세부 입력 내역(rows)까지 전부 DB에 저장하도록 로직 보강
     async function calculateAndSaveT5() {
         const site = document.getElementById('t5-site-title').value.trim() || "미지정 부위";
         const rows = document.querySelectorAll('.t5-row-item');
         let totalLength = 0;
+        let rowsData = []; // DB 저장용 세부 내역 배열
         
         rows.forEach(row => {
+            const section = row.querySelector('.t5-section-name').value;
             const len = parseInt(row.querySelector('.t5-length-val').value) || 0;
             totalLength += len;
+            rowsData.push({ section: section, length: len });
         });
 
         if(totalLength === 0) return alert("길이를 입력하세요.");
@@ -424,9 +427,10 @@
         specs.forEach(spec => { 
             if(result[spec.nominal] > 0) resultArr.push(`${spec.nominal} - ${result[spec.nominal]}개`); 
         });
-        const resultStr = resultArr.join(' / ');
+        const resultStr = resultArr.join(' / '); // 이걸 기준으로 복사 기능에서 줄바꿈 처리
 
-        const t5Data = { teamId: myTeamId, siteName: site, resultText: resultStr, writer: userNickname, createdAt: Date.now() };
+        // rowsData 배열을 포함시켜 저장
+        const t5Data = { teamId: myTeamId, siteName: site, resultText: resultStr, writer: userNickname, createdAt: Date.now(), rows: rowsData };
 
         try {
             await db.collection("t5_logs").add(t5Data);
@@ -436,6 +440,59 @@
         } catch(e) { alert("저장 실패: " + e.message); }
     }
 
+    // [신규] T5 세부내역 불러오기 로직
+    async function loadT5Log(id) {
+        try {
+            const doc = await db.collection("t5_logs").doc(id).get();
+            const d = doc.data();
+            
+            document.getElementById('t5-site-title').value = d.siteName === "미지정 부위" ? "" : d.siteName;
+            
+            const container = document.getElementById('t5-input-container');
+            container.innerHTML = '';
+            
+            // 기존 데이터가 있으면 폼 재생성
+            if (d.rows && d.rows.length > 0) {
+                d.rows.forEach(r => {
+                    const div = document.createElement('div');
+                    div.className = "row g-2 mb-2 t5-row-item";
+                    div.innerHTML = `<div class="col-6"><input type="text" class="form-control t5-input-dark t5-section-name" placeholder="구간 (예: 거실)" value="${r.section}"></div><div class="col-6"><input type="number" class="form-control t5-input-dark t5-length-val" placeholder="길이 (예: 4500)" value="${r.length || ''}"></div>`;
+                    container.appendChild(div);
+                });
+            } else {
+                addT5Row(); // 구버전 데이터라 rows가 없으면 빈칸 하나 추가
+            }
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } catch(e) {
+            alert("불러오기 실패: " + e.message);
+        }
+    }
+
+    // [신규] 카톡 발주용 텍스트 복사 로직 (내려쓰기 적용)
+    function copyT5OrderText(site, text) {
+        // " / " 기준으로 나눈 뒤 엔터(\n)로 변경하여 텍스트 포맷팅
+        const formattedText = site + '\n' + text.split(' / ').join('\n');
+        
+        // 브라우저 클립보드 API를 사용한 복사 (모바일 호환성 높음)
+        const textArea = document.createElement("textarea");
+        textArea.value = formattedText;
+        textArea.style.position = "absolute";
+        textArea.style.left = "-999999px";
+        document.body.prepend(textArea);
+        textArea.select();
+        
+        try {
+            document.execCommand('copy');
+            alert("카톡 발주 양식으로 복사되었습니다!\n\n" + formattedText);
+        } catch (error) {
+            alert("복사에 실패했습니다.");
+        } finally {
+            textArea.remove();
+        }
+    }
+
+    // [수정됨] 히스토리 카드 버튼 3개로 확장
     function loadT5History() {
         db.collection("t5_logs").where("teamId","==", myTeamId).orderBy("createdAt","desc").limit(20).onSnapshot(ss => {
             document.getElementById('t5-history-list').innerHTML = ss.docs.map(doc => {
@@ -446,7 +503,9 @@
                     <h6 class="fw-bold text-white mb-2">${d.siteName}</h6>
                     <p class="text-secondary small mb-3">${d.resultText}</p>
                     <div class="d-flex gap-2">
-                        <button class="t5-btn-primary py-2 fs-6 rounded-3" style="flex:1; background:var(--danger-btn);" onclick="deleteT5Log('${doc.id}')">내역 삭제</button>
+                        <button class="t5-btn-primary py-2 rounded-3" style="flex:1; font-size:0.8rem;" onclick="loadT5Log('${doc.id}')">불러오기</button>
+                        <button class="t5-btn-primary py-2 rounded-3" style="flex:1; font-size:0.8rem; background:var(--success-btn);" onclick="copyT5OrderText('${d.siteName}', '${d.resultText}')">발주 복사</button>
+                        <button class="t5-btn-primary py-2 rounded-3" style="flex:1; font-size:0.8rem; background:var(--danger-btn);" onclick="deleteT5Log('${doc.id}')">삭제</button>
                     </div>
                 </div>`;
             }).join('') || '<p class="text-secondary small ms-2">저장된 T5 산출 내역이 없습니다.</p>';
@@ -458,9 +517,7 @@
     // [엑셀 출력]
     async function exportToExcel(id) { const doc = await db.collection("monthly_logs").doc(id).get(); const d_raw = doc.data(); const [year, monthNum] = d_raw.month.split('-'); const lastDayNum = new Date(year, monthNum, 0).getDate(); const wb = XLSX.utils.book_new(); const wsData = Array.from({ length: 5 }, () => Array(36).fill("")); wsData[0][0] = `${year}년 ${monthNum}월 현장 작업 일보 (김목수이야기)`; wsData[1][0] = `현장명: ${d_raw.site}`; wsData[1][12] = `기간: ${year}.${monthNum}.01 ~ ${monthNum}.${lastDayNum}`; wsData[1][30] = `작성자: ${d_raw.writer || "관리자"}`; wsData[3] = ["NO", "공정", "이 름", ...Array.from({length:31},(_,i)=>i+1), "계", "비고"]; let curR = 5, totalNo = 1; d_raw.teamData.forEach(team => { let startR = curR + 1; team.workers.forEach(w => { const row = [totalNo++, team.teamName, w.name, ...Array.from({length:31},(_,i)=>parseFloat(w.days[i+1]||0)|| ""), {t:'n', f:`SUM(D${curR+1}:AH${curR+1})`}]; wsData.push(row); curR++; }); wsData.push(["", team.teamName, "공정소계", ...Array(31).fill(""), {t:'n', f:`SUM(AI${startR}:AI${curR})`}]); curR += 2; wsData.push(Array(36).fill("")); }); const ws = XLSX.utils.aoa_to_sheet(wsData); ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:35}}, {s:{r:1,c:0},e:{r:1,c:11}}, {s:{r:1,c:12},e:{r:1,c:29}}, {s:{r:1,c:30},e:{r:1,c:35}}]; ws['!cols'] = [{wch:4.5},{wch:11},{wch:11},...Array(31).fill({wch:2.2}),{wch:7},{wch:10}]; ws['!rows'] = [{hpt:55},{hpt:25},{hpt:12},{hpt:25},{hpt:12}]; XLSX.utils.book_append_sheet(wb, ws, "근무현황"); XLSX.writeFile(wb, `${d_raw.site}_${monthNum}월_${d_raw.writer}.xlsx`); }
     
-    // 달 변경 시 다시 렌더링되도록 이벤트 바인딩
-    document.getElementById('logMonth').onchange = renderAllTeams; 
-    document.getElementById('logMonth').value = new Date().toISOString().substring(0, 7);
+    document.getElementById('logMonth').onchange = renderAllTeams; document.getElementById('logMonth').value = new Date().toISOString().substring(0, 7);
 </script>
 </body>
 </html>
