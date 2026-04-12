@@ -90,7 +90,17 @@
         .g-red { background: rgba(239, 68, 68, 0.2) !important; color: #ef4444 !important; }
 
         #auth-overlay { position: fixed; inset: 0; background: var(--bg-deep); z-index: 9999; display: flex; align-items: center; justify-content: center; }
-        .login-card { background: var(--card-bg); padding: 40px; border-radius: 24px; width: 100%; max-width: 380px; text-align: center; }
+        .login-card { background: var(--card-bg); padding: 40px; border-radius: 24px; width: 100%; max-width: 380px; text-align: center; 
+                    <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1e222d">
+
+<script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(function(error) {
+            console.log('서비스 워커 등록 실패:', error);
+        });
+    }
+</script>
     </style>
 </head>
 <body>
