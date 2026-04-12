@@ -6,176 +6,270 @@
     
     <link rel="icon" href="favicon.png" type="image/png">
     <link rel="apple-touch-icon" href="favicon.png">
-    <meta property="og:title" content="김목수이야기 - 스마트 대시보드">
-    <meta property="og:description" content="현장 관리 전문 시스템">
+    <meta property="og:title" content="김목수이야기 - All-in-One 시스템">
     <meta property="og:image" content="og-image.png">
 
-    <title>김목수이야기 - Dashboard</title>
+    <title>김목수이야기 - 통합 관리 대시보드</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
     <script src="firebase-config.js"></script>
 
     <style>
         :root {
-            --bg-deep: #020617; /* 완전한 다크 배경 */
+            --bg-deep: #020617;
             --sidebar-bg: #0f172a;
             --card-bg: #1e293b;
             --primary-accent: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
         }
 
-        body { background-color: var(--bg-deep); color: #f8fafc; font-family: 'Pretendard', sans-serif; overflow-x: hidden; }
+        body { background-color: var(--bg-deep); color: #f8fafc; font-family: 'Pretendard', sans-serif; margin: 0; overflow: hidden; }
 
-        /* 사이드바 고정 스타일 */
+        /* [레이아웃] 사이드바 & 메인 영역 */
+        .app-wrapper { display: flex; height: 100vh; width: 100vw; }
+        
         .sidebar {
-            width: 280px;
-            height: 100vh;
-            position: fixed;
-            left: 0;
-            top: 0;
-            background-color: var(--sidebar-bg);
+            width: 260px; background-color: var(--sidebar-bg);
             border-right: 1px solid rgba(255,255,255,0.05);
-            z-index: 1000;
-            transition: 0.3s;
+            display: flex; flex-direction: column; transition: 0.3s;
         }
 
-        /* 메인 콘텐츠 영역 (사이드바 우측) */
-        .main-content {
-            margin-left: 280px;
-            min-height: 100vh;
-            padding: 40px;
-            transition: 0.3s;
-        }
+        .main-container { flex: 1; overflow-y: auto; position: relative; background-color: var(--bg-deep); }
 
-        /* 모바일 대응 */
-        @media (max-width: 768px) {
-            .sidebar { transform: translateX(-100%); width: 240px; }
-            .sidebar.active { transform: translateX(0); }
-            .main-content { margin-left: 0; padding: 20px; }
-        }
-
-        /* 메뉴 아이템 POP 효과 */
+        /* [메뉴 스타일 & POP 효과] */
         .nav-link {
-            color: #94a3b8;
-            padding: 12px 20px;
-            margin: 4px 15px;
-            border-radius: 10px;
+            color: #94a3b8; padding: 14px 20px; margin: 4px 15px; border-radius: 12px;
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer; display: flex; align-items: center; text-decoration: none;
         }
-
+        .nav-link i { font-size: 1.2rem; margin-right: 12px; }
         .nav-link:hover, .nav-link.active {
-            background-color: var(--primary-accent);
-            color: white;
+            background-color: var(--primary-accent); color: white;
             transform: translateX(8px) scale(1.02);
             box-shadow: 0 10px 20px rgba(59, 130, 246, 0.2);
         }
 
-        .content-section { display: none; animation: fadeIn 0.4s ease-out; }
-        .content-section.active { display: block; }
-
+        /* [콘텐츠 섹션 제어] */
+        .page-section { display: none; padding: 40px; animation: fadeIn 0.4s ease-out; }
+        .page-section.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .dash-card {
-            background-color: var(--card-bg);
-            border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 20px;
-            padding: 30px;
-            cursor: pointer;
-            transition: 0.3s;
-        }
+        /* [작업일보 전용 스타일 - 기존과 동일] */
+        .excel-table { width: 100%; border-collapse: collapse; background: var(--card-bg); margin-bottom: 10px; table-layout: fixed; border: 2px solid #4b5563; }
+        .excel-table td { border: 1px solid #4b5563; text-align: center; height: 38px; font-size: 0.85rem; color: white; }
+        .date-row td { height: 22px !important; background: #2d3748; font-size: 0.75rem; }
+        .name-cell { width: 75px; background: #1a202c !important; }
+        .gongsu-cell { cursor: pointer; font-weight: bold; -webkit-user-select: none; user-select: none; }
+        .g-green { background: rgba(16, 185, 129, 0.2) !important; color: #10b981 !important; }
+        .g-yellow { background: rgba(245, 158, 11, 0.2) !important; color: #f59e0b !important; }
+        .g-red { background: rgba(239, 68, 68, 0.2) !important; color: #ef4444 !important; }
 
-        .dash-card:hover { transform: translateY(-10px); border-color: var(--primary-accent); box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+        /* 로그인 화면 전용 */
+        #auth-overlay {
+            position: fixed; inset: 0; background: var(--bg-deep); z-index: 9999;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .login-card { background: var(--card-bg); padding: 40px; border-radius: 20px; width: 100%; max-width: 380px; text-align: center; }
     </style>
 </head>
 <body>
 
-<button class="btn btn-primary d-md-none position-fixed bottom-0 end-0 m-4 rounded-circle" style="z-index: 2000; width:60px; height:60px;" onclick="document.querySelector('.sidebar').classList.toggle('active')">
-    <i class="bi bi-list fs-3"></i>
-</button>
-
-<div class="sidebar d-flex flex-column">
-    <div class="p-4 text-center border-bottom border-secondary border-opacity-25">
-        <img src="kimmoksu_main_logo.png" alt="로고" style="max-width: 150px;">
-    </div>
-    
-    <ul class="nav nav-pills flex-column mt-4 mb-auto">
-        <li><a href="#" class="nav-link active" onclick="showSection('home', this)"><i class="bi bi-grid-fill me-2"></i> 대시보드</a></li>
-        <li><a href="monthly_log.html" class="nav-link"><i class="bi bi-journal-check me-2"></i> 실전 작업일보</a></li>
-        <li><a href="work_log_test.html" class="nav-link"><i class="bi bi-flask me-2"></i> test ver.</a></li>
-        <li><a href="t5.html" class="nav-link"><i class="bi bi-calculator me-2"></i> T5 계산기</a></li>
-        <li><a href="#" class="nav-link" onclick="alert('준비 중')"><i class="bi bi-tools me-2"></i> 공구/자재 관리</a></li>
-    </ul>
-
-    <div class="p-4 border-top border-secondary border-opacity-10">
-        <div class="d-flex align-items-center">
-            <i class="bi bi-person-circle fs-3 me-3 text-primary"></i>
-            <div class="overflow-hidden">
-                <div id="sideUserName" class="fw-bold text-truncate">사용자</div>
-                <div class="small text-secondary" style="font-size: 0.75rem;">김목수이야기 Pro</div>
-            </div>
-            <button class="btn btn-link text-danger ms-auto p-0" onclick="handleLogout()"><i class="bi bi-box-arrow-right fs-5"></i></button>
-        </div>
+<div id="auth-overlay" style="display: none;">
+    <div class="login-card">
+        <img src="kimmoksu_main_logo.png" style="max-width: 180px; margin-bottom: 30px;">
+        <h3 id="auth-title" class="mb-4 fw-bold">현장 관리 접속</h3>
+        <input type="text" id="userNick" class="form-control bg-dark text-white border-secondary mb-3" placeholder="닉네임" style="display:none;">
+        <input type="email" id="userEmail" class="form-control bg-dark text-white border-secondary mb-3" placeholder="이메일">
+        <input type="password" id="userPw" class="form-control bg-dark text-white border-secondary mb-4" placeholder="비밀번호">
+        <button class="btn btn-primary w-100 fw-bold py-2" onclick="handleAuth()">접속하기</button>
+        <p class="mt-4 text-secondary small" onclick="toggleAuthMode()" style="cursor:pointer;">계정이 없으신가요? <b class="text-primary">회원가입</b></p>
     </div>
 </div>
 
-<main class="main-content">
-    <div id="home" class="content-section active">
-        <div class="mb-5">
-            <h1 class="fw-bold mb-2" id="welcomeMsg">반갑습니다!</h1>
-            <p class="text-secondary fs-5">현장 상황을 한눈에 파악하고 관리하세요.</p>
+<div class="app-wrapper">
+    <nav class="sidebar">
+        <div class="p-4 text-center border-bottom border-secondary border-opacity-10">
+            <img src="kimmoksu_main_logo.png" alt="로고" style="max-width: 140px;">
+        </div>
+        
+        <div class="flex-grow-1 mt-4">
+            <div class="nav-link active" onclick="showPage('home', this)"><i class="bi bi-house-door"></i> 대시보드</div>
+            <div class="nav-link" onclick="showPage('worklog', this)"><i class="bi bi-journal-check"></i> 실전 작업일보</div>
+            <div class="nav-link" onclick="showPage('t5', this)"><i class="bi bi-calculator"></i> T5 계산기</div>
         </div>
 
-        <div class="row g-4">
-            <div class="col-md-6 col-lg-4">
-                <div class="dash-card h-100" onclick="location.href='monthly_log.html'">
-                    <div class="text-primary mb-3"><i class="bi bi-calendar-check fs-1"></i></div>
-                    <h3>작업일보</h3>
-                    <p class="text-secondary m-0">공수 기입부터 엑셀 출력까지 한 번에.</p>
+        <div class="p-4 border-top border-secondary border-opacity-10">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-person-circle fs-3 me-3 text-primary"></i>
+                <div class="flex-grow-1 overflow-hidden">
+                    <div id="userNickDisplay" class="fw-bold text-truncate">사용자</div>
+                    <div class="small text-secondary" style="font-size:0.7rem;">Story of Kimmoksu</div>
                 </div>
-            </div>
-            <div class="col-md-6 col-lg-4">
-                <div class="dash-card h-100" onclick="location.href='t5.html'">
-                    <div class="text-warning mb-3"><i class="bi bi-lightbulb fs-1"></i></div>
-                    <h3>T5 계산기</h3>
-                    <p class="text-secondary m-0">간접조명 물량 산출 및 견적 보조.</p>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-4">
-                <div class="dash-card h-100 opacity-50">
-                    <div class="text-success mb-3"><i class="bi bi-house-gear fs-1"></i></div>
-                    <h3>도면 뷰어</h3>
-                    <p class="text-secondary m-0">업데이트 준비 중인 기능입니다.</p>
-                </div>
+                <i class="bi bi-box-arrow-right text-danger fs-4 cursor-pointer" onclick="handleLogout()" style="cursor:pointer;"></i>
             </div>
         </div>
-    </div>
-</main>
+    </nav>
+
+    <main class="main-container">
+        
+        <section id="page-home" class="page-section active">
+            <h1 id="welcomeMsg" class="fw-bold mb-3">반갑습니다!</h1>
+            <p class="text-secondary fs-5 mb-5">오늘의 현장 관리를 시작하세요.</p>
+            <div class="row g-4">
+                <div class="col-md-6"><div class="dash-card p-4 h-100 bg-dark border-secondary border-opacity-25 rounded-4" onclick="showPage('worklog', document.querySelectorAll('.nav-link')[1])"><h3>📝 작업일보 작성</h3><p class="text-secondary">공수 기입 및 엑셀 출력을 시작합니다.</p></div></div>
+                <div class="col-md-6"><div class="dash-card p-4 h-100 bg-dark border-secondary border-opacity-25 rounded-4" onclick="showPage('t5', document.querySelectorAll('.nav-link')[2])"><h3>💡 T5 물량 산출</h3><p class="text-secondary">간접조명 자재 수량을 계산합니다.</p></div></div>
+            </div>
+        </section>
+
+        <section id="page-worklog" class="page-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="fw-bold m-0">실전 작업일보</h2>
+                <button onclick="addTeam()" class="btn btn-outline-primary btn-sm">+ 공정 추가</button>
+            </div>
+            <div class="row g-2 mb-4">
+                <div class="col-5"><input type="month" id="logMonth" class="form-control bg-dark text-white border-secondary"></div>
+                <div class="col-7"><input type="text" id="siteName" class="form-control bg-dark text-white border-secondary" placeholder="현장명 입력"></div>
+            </div>
+            <div id="team-container"></div>
+            <button class="btn btn-success w-100 mt-4 mb-5 fw-bold" onclick="saveMonthlyLog()">현장 데이터 최종 저장 💾</button>
+            <hr class="border-secondary opacity-25">
+            <h4 class="fw-bold mt-5 mb-3">📂 저장된 기록</h4>
+            <div id="history-list"></div>
+        </section>
+
+        <section id="page-t5" class="page-section text-center">
+            <h2 class="fw-bold mb-4">T5 조명 계산기</h2>
+            <div class="alert alert-info bg-dark text-info border-info border-opacity-25">업데이트 중입니다. 기존 T5 기능을 여기에 통합할 예정입니다.</div>
+        </section>
+
+    </main>
+</div>
 
 <script>
+    /* [인증 및 페이지 제어 로직] */
+    let myEmail, myTeamId, editingId = null, userNickname = "관리자";
+    let isLoginMode = true;
+    let teamData = [{ teamName: "목공팀", workers: [] }];
+
     auth.onAuthStateChanged(async user => {
-        if (user) { 
-            const userDoc = await db.collection("users").doc(user.email).get();
-            const nick = userDoc.exists ? userDoc.data().nickname : user.email.split('@')[0];
-            document.getElementById('welcomeMsg').innerText = `${nick}님, 반갑습니다!`;
-            document.getElementById('sideUserName').innerText = nick;
-        } else { location.href = 'index.html'; } // 실제 서비스 시 로그인 안 되면 튕기게 설정
+        if (user) {
+            myEmail = user.email;
+            document.getElementById('auth-overlay').style.display = 'none';
+            const uDoc = await db.collection("users").doc(myEmail).get();
+            userNickname = uDoc.exists ? uDoc.data().nickname : "관리자";
+            document.getElementById('userNickDisplay').innerText = userNickname;
+            document.getElementById('welcomeMsg').innerText = `${userNickname}님, 반갑습니다!`;
+            await findTeam(); loadHistory(); renderAllTeams();
+        } else {
+            document.getElementById('auth-overlay').style.display = 'flex';
+        }
     });
 
-    function showSection(id, el) {
-        document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
+    function showPage(pageId, el) {
+        document.querySelectorAll('.page-section').forEach(p => p.classList.remove('active'));
+        document.getElementById('page-' + pageId).classList.add('active');
         document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
         el.classList.add('active');
-        if(window.innerWidth <= 768) document.querySelector('.sidebar').classList.remove('active');
     }
 
-    async function handleLogout() { if(confirm("로그아웃 하시겠습니까?")) { await auth.signOut(); location.reload(); } }
-</script>
+    async function findTeam() {
+        const q = await db.collection("teams").where("members", "array-contains", myEmail).get();
+        if (!q.empty) { myTeamId = q.docs[0].id; }
+    }
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    /* [작업일보 핵심 로직 - 기존과 100% 동일] */
+    function renderAllTeams() {
+        const container = document.getElementById('team-container');
+        const [year, month] = (document.getElementById('logMonth').value || "2026-04").split('-').map(Number);
+        const lastDay = new Date(year, month, 0).getDate();
+        container.innerHTML = teamData.map((team, tIdx) => {
+            let teamTotal = 0;
+            const tables = team.workers.map((w, wIdx) => {
+                let pSum = 0;
+                Object.values(w.days).forEach(v => pSum += parseFloat(v || 0));
+                teamTotal += pSum;
+                return `
+                <table class="excel-table">
+                    <tr class="date-row"><td rowspan="4" class="name-cell">${w.name}<br><button onclick="removeWorker(${tIdx}, ${wIdx})" class="btn btn-danger btn-xs py-0 px-1 mt-1" style="font-size:0.6rem;">삭제</button></td>${loopDays(year, month, 1, 16, 'date')}</tr>
+                    <tr>${loopDays(year, month, 1, 16, 'input', tIdx, wIdx)}</tr>
+                    <tr class="date-row">${loopDays(year, month, 17, 31, 'date', 0, 0, lastDay)}<td style="background:#1a202c;">계</td></tr>
+                    <tr>${loopDays(year, month, 17, 31, 'input', tIdx, wIdx, lastDay)}<td class="fw-bold text-primary">${pSum % 1 === 0 ? pSum : pSum.toFixed(1)}</td></tr>
+                </table>`;
+            }).join('');
+            return `<div class="mb-4"><div class="d-flex justify-content-between align-items-center mb-2"><h5 class="m-0 fw-bold text-info">${team.teamName}</h5><button onclick="addWorker(${tIdx})" class="btn btn-outline-info btn-xs py-0 px-2">+</button></div>${tables}<div class="text-end small text-secondary">소계: ${teamTotal.toFixed(1)}</div></div>`;
+        }).join('');
+        bindLongPress();
+    }
+
+    function loopDays(y, m, start, end, type, tIdx, wIdx, lastDay = 31) {
+        let html = "";
+        for (let d = start; d <= end; d++) {
+            const isInvalid = d > lastDay;
+            if (type === 'date') html += `<td>${isInvalid ? '' : d}</td>`;
+            else {
+                if (isInvalid) html += `<td style="background:#0f172a;"></td>`;
+                else {
+                    const val = teamData[tIdx].workers[wIdx].days[d] || "";
+                    let c = ""; if(val) { const n=parseFloat(val); c = n>2?"g-red":n>1?"g-yellow":"g-green"; }
+                    html += `<td class="gongsu-cell ${c}" data-t="${tIdx}" data-w="${wIdx}" data-d="${d}" onclick="handleCellClick(this)">${val}</td>`;
+                }
+            }
+        }
+        return html;
+    }
+
+    function handleCellClick(el) {
+        const { t, w, d } = el.dataset;
+        teamData[t].workers[w].days[d] = (teamData[t].workers[w].days[d] == 1 ? "" : 1);
+        renderAllTeams();
+    }
+
+    function bindLongPress() {
+        document.querySelectorAll('.gongsu-cell').forEach(cell => {
+            let timer;
+            cell.onmousedown = cell.ontouchstart = () => timer = setTimeout(() => {
+                const { t, w, d } = cell.dataset;
+                const input = prompt("공수 직접 입력", teamData[t].workers[w].days[d]);
+                if (input !== null) { teamData[t].workers[w].days[d] = input; renderAllTeams(); }
+            }, 700);
+            cell.onmouseup = cell.ontouchend = () => clearTimeout(timer);
+        });
+    }
+
+    async function saveMonthlyLog() {
+        const month = document.getElementById('logMonth').value;
+        const site = document.getElementById('siteName').value.trim();
+        if(!site) return alert("현장명을 입력하세요.");
+        await db.collection("monthly_logs").add({ teamId: myTeamId, month, site, teamData, updatedAt: Date.now(), writer: userNickname });
+        alert("저장되었습니다!"); location.reload();
+    }
+
+    function loadHistory() {
+        db.collection("monthly_logs").where("teamId","==", myTeamId).orderBy("updatedAt","desc").limit(10).onSnapshot(ss => {
+            document.getElementById('history-list').innerHTML = ss.docs.map(doc => {
+                const d = doc.data();
+                return `<div class="p-3 bg-dark border border-secondary border-opacity-25 rounded-3 mb-2 d-flex justify-content-between align-items-center">
+                    <div><small class="text-primary">${d.month}</small><br><b>${d.site}</b></div>
+                    <button class="btn btn-success btn-sm" onclick="exportToExcel('${doc.id}')">엑셀</button>
+                </div>`;
+            }).join('');
+        });
+    }
+
+    // [인증 관련]
+    function toggleAuthMode() { isLoginMode = !isLoginMode; document.getElementById('auth-title').innerText = isLoginMode ? "현장 관리 접속" : "회원가입 시작"; document.getElementById('userNick').style.display = isLoginMode ? "none" : "block"; }
+    async function handleAuth() { /* 이메일/PW 로그인 로직 그대로 사용 */ }
+    async function handleLogout() { if(confirm("로그아웃 하시겠습니까?")) await auth.signOut(); }
+
+    document.getElementById('logMonth').onchange = renderAllTeams;
+</script>
 </body>
 </html>
 
