@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>현장 마감 체크리스트 - 김목수이야기</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <style>
+        :root {
+            --bg-deep: #131722; --card-bg: #2a2e39;
+            --primary-accent: #5c7cfa; --danger-btn: #e03131;
+        }
+        body { background-color: var(--bg-deep); color: #f8fafc; font-family: 'Pretendard', sans-serif; padding-top: 20px; }
+        .container { max-width: 600px; }
+        
+        .header-box { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; }
+        .writer-badge { background: rgba(92, 124, 250, 0.2); color: var(--primary-accent); padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
+
+        .t5-card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .input-dark { background: #1e222d !important; border: 1px solid rgba(255,255,255,0.1) !important; color: white !important; }
+        
+        /* 체크리스트 아이템 스타일 */
+        .check-item { 
+            display: flex; align-items: center; padding: 15px; border-radius: 12px; 
+            background: #1e222d; margin-bottom: 10px; transition: 0.3s; border: 1px solid rgba(255,255,255,0.05);
+        }
+        .check-item.completed { 
+            opacity: 0.4; background: #131722; filter: grayscale(0.5); 
+        }
+        .check-item.completed .item-text { text-decoration: line-through; }
+
+        .custom-check { width: 24px; height: 24px; cursor: pointer; border-radius: 6px; border: 2px solid var(--primary-accent); appearance: none; position: relative; margin-right: 15px; flex-shrink: 0; }
+        .custom-check:checked { background-color: var(--primary-accent); }
+        .custom-check:checked::after { content: '✔'; position: absolute; color: white; font-size: 14px; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+        .item-text { flex-grow: 1; font-size: 1rem; border: none; background: transparent; color: white; outline: none; }
+        .btn-del { color: #555; cursor: pointer; padding: 5px; transition: 0.2s; }
+        .btn-del:hover { color: var(--danger-btn); }
+
+        .sticky-bottom-input { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-deep); padding: 15px; border-top: 1px solid rgba(255,255,255,0.1); }
+    </style>
+</head>
+<body>
+
+<div class="container pb-5">
+    <div class="header-box">
+        <div>
+            <h4 class="fw-bold m-0" id="displaySiteName">현장 로딩 중...</h4>
+            <p class="small text-secondary mt-1">마감 펀치리스트</p>
+        </div>
+        <div class="writer-badge" id="displayWriter">작성자</div>
+    </div>
+
+    <div id="checklist-container">
+        </div>
+    
+    <div style="height: 100px;"></div>
+</div>
+
+<div class="sticky-bottom-input">
+    <div class="container">
+        <div class="input-group">
+            <input type="text" id="newTaskInput" class="form-control input-dark py-2" placeholder="새로운 마감 항목 입력...">
+            <button class="btn btn-primary px-4" onclick="addTask()">추가</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let myEmail, userNickname, currentSiteId;
+    
+    // URL에서 현장명을 가져오거나 로컬스토리지 활용 (테스트용으로 '진영현장' 세팅)
+    const siteTitle = localStorage.getItem('currentSite') || "미지정 현장";
+    document.getElementById('displaySiteName').innerText = siteTitle;
+
+    auth.onAuthStateChanged(async user => {
+        if (user) {
+            myEmail = user.email;
+            const uDoc = await db.collection("users").doc(myEmail).get();
+            userNickname = uDoc.exists ? uDoc.data().nickname : "관리자";
+            document.getElementById('displayWriter').innerText = userNickname;
+            loadChecklist();
+        } else {
+            alert("로그인이 필요합니다.");
+            location.href = "index.html";
+        }
+    });
+
+    // 리스트 불러오기 (정렬 로직 포함)
+    function loadChecklist() {
+        db.collection("punch_lists")
+          .where("siteName", "==", siteTitle)
+          .orderBy("createdAt", "asc")
+          .onSnapshot(ss => {
+            let items = ss.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            // 핵심: 완료되지 않은 것(false)이 위로, 완료된 것(true)이 아래로 정렬
+            items.sort((a, b) => a.done - b.done);
+            
+            renderList(items);
+        });
+    }
+
+    function renderList(items) {
+        const container = document.getElementById('checklist-container');
+        container.innerHTML = items.map(item => `
+            <div class="check-item ${item.done ? 'completed' : ''}">
+                <input type="checkbox" class="custom-check" ${item.done ? 'checked' : ''} 
+                       onclick="toggleTask('${item.id}', ${item.done})">
+                <input type="text" class="item-text" value="${item.text}" 
+                       onchange="updateTaskText('${item.id}', this.value)" 
+                       ${item.done ? 'readonly' : ''}>
+                <i class="bi bi-x-lg btn-del" onclick="deleteTask('${item.id}')"></i>
+            </div>
+        `).join('');
+    }
+
+    async function addTask() {
+        const text = document.getElementById('newTaskInput').value.trim();
+        if(!text) return;
+        
+        await db.collection("punch_lists").add({
+            siteName: siteTitle,
+            text: text,
+            done: false,
+            writer: userNickname,
+            createdAt: Date.now()
+        });
+        
+        document.getElementById('newTaskInput').value = '';
+    }
+
+    async function toggleTask(id, currentStatus) {
+        await db.collection("punch_lists").doc(id).update({ done: !currentStatus });
+    }
+
+    async function updateTaskText(id, newText) {
+        await db.collection("punch_lists").doc(id).update({ text: newText });
+    }
+
+    async function deleteTask(id) {
+        if(confirm("이 항목을 삭제할까요?")) {
+            await db.collection("punch_lists").doc(id).delete();
+        }
+    }
+</script>
+</body>
+</html>
