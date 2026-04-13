@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>현장 마감 체크리스트 - 김목수이야기</title>
+    <title>마감 펀치리스트 - 김목수이야기</title>
+    
+    <link rel="icon" href="favicon.png" type="image/png">
+    <link rel="apple-touch-icon" href="favicon.png">
+    <meta name="theme-color" content="#1e222d">
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -15,181 +19,311 @@
 
     <style>
         :root {
-            --bg-deep: #131722; --card-bg: #2a2e39;
-            --primary-accent: #5c7cfa; --danger-btn: #e03131;
-            --success-btn: #0ca678;
+            --bg-deep: #131722; --sidebar-bg: #1e222d; --card-bg: #2a2e39;
+            --primary-accent: #5c7cfa; --danger-btn: #e03131; --success-btn: #0ca678;
         }
-        body { background-color: var(--bg-deep); color: #f8fafc; font-family: 'Pretendard', sans-serif; padding-top: 20px; }
-        .container { max-width: 600px; }
+
+        body { background-color: var(--bg-deep); color: #f8fafc; font-family: 'Pretendard', sans-serif; margin: 0; overflow: hidden; }
+
+        .app-wrapper { display: flex; height: 100vh; height: 100dvh; width: 100vw; position: relative; }
         
+        /* 사이드바 & 공통 레이아웃 (기존 메인과 100% 동일) */
+        .sidebar { width: 260px; height: 100dvh; background-color: var(--sidebar-bg); border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; transition: 0.3s; z-index: 1050; overflow-y: auto; }
+        .main-container { flex: 1; overflow-y: auto; background-color: var(--bg-deep); padding: 30px; max-width: 1000px; margin: 0 auto; width: 100%; }
+        
+        .nav-link { color: #94a3b8; padding: 14px 20px; margin: 4px 15px; border-radius: 12px; transition: 0.3s; cursor: pointer; display: flex; align-items: center; text-decoration: none; }
+        .nav-link i { font-size: 1.2rem; margin-right: 12px; }
+        .nav-link:hover, .nav-link.active { background-color: rgba(92, 124, 250, 0.2); color: var(--primary-accent); font-weight: bold; }
+
+        .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1040; backdrop-filter: blur(2px); transition: 0.3s; opacity: 0; }
+        .sidebar-overlay.active { display: block; opacity: 1; }
+        @media (max-width: 768px) {
+            .sidebar { position: fixed; left: 0; top: 0; transform: translateX(-100%); } 
+            .sidebar.active { transform: translateX(0); } 
+            .main-container { padding: 20px 15px; } 
+            .mobile-menu-btn { display: flex !important; } 
+        }
+
+        .mobile-menu-btn { display: none; position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px; border-radius: 50%; background-color: var(--primary-accent); color: white; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 1030; border: none; font-size: 1.8rem; cursor: pointer; }
+
+        /* 펀치리스트 전용 스타일 */
         .t5-card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .input-dark { background: #1e222d !important; border: 1px solid rgba(255,255,255,0.1) !important; color: white !important; }
         .input-dark::placeholder { color: #8b95a1 !important; }
-        .btn-primary-custom { background: var(--primary-accent); border: none; color: white; border-radius: 8px; transition: 0.2s; cursor: pointer; }
-        
-        .header-box { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
-        .writer-badge { background: rgba(92, 124, 250, 0.2); color: var(--primary-accent); padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
+        .btn-primary-custom { background: var(--primary-accent); border: none; color: white; border-radius: 8px; transition: 0.2s; cursor: pointer; font-weight: bold; }
+        .btn-primary-custom:active { transform: scale(0.95); }
 
-        /* 프로그레스 바 */
-        .progress-container { background: #1e222d; border-radius: 10px; height: 22px; overflow: hidden; position: relative; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); }
-        .progress-fill { background: var(--primary-accent); height: 100%; width: 0%; transition: width 0.4s ease-out; }
-        .progress-text { position: absolute; width: 100%; text-align: center; top: 1px; font-size: 0.75rem; font-weight: bold; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); }
+        .round-add-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--primary-accent); color: white; border: none; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; transition: 0.2s; }
+        .round-add-btn:active { transform: scale(0.9); }
 
-        /* 체크리스트 아이템 */
-        .check-item { 
-            display: flex; align-items: center; padding: 15px; border-radius: 12px; 
-            background: #1e222d; margin-bottom: 10px; transition: 0.3s; border: 1px solid rgba(255,255,255,0.05);
-        }
+        .summary-card { background: #1e222d; border-radius: 12px; padding: 16px; border: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: 0.2s; position: relative; }
+        .summary-card:hover { border-color: var(--primary-accent); background: rgba(92, 124, 250, 0.05); }
+        .summary-del-btn { position: absolute; top: 12px; right: 12px; background: rgba(224, 49, 49, 0.1); color: var(--danger-btn); border: none; border-radius: 6px; padding: 4px 8px; font-size: 0.75rem; transition: 0.2s; }
+        .summary-del-btn:hover { background: var(--danger-btn); color: white; }
+
+        /* 상세 화면 리스트 스타일 */
+        .check-item { display: flex; align-items: center; padding: 15px; border-radius: 12px; background: #1e222d; margin-bottom: 10px; transition: 0.3s; border: 1px solid rgba(255,255,255,0.05); }
         .check-item.completed { opacity: 0.4; background: #131722; filter: grayscale(0.5); }
         .check-item.completed .item-text { text-decoration: line-through; color: #8b95a1; }
-
         .custom-check { width: 24px; height: 24px; cursor: pointer; border-radius: 6px; border: 2px solid var(--primary-accent); appearance: none; position: relative; margin-right: 15px; flex-shrink: 0; background: transparent; }
         .custom-check:checked { background-color: var(--primary-accent); }
         .custom-check:checked::after { content: '✔'; position: absolute; color: white; font-size: 14px; top: 50%; left: 50%; transform: translate(-50%, -50%); }
-
         .item-text { flex-grow: 1; font-size: 1rem; border: none; background: transparent; color: white; outline: none; }
         .btn-del { color: #555; cursor: pointer; padding: 5px 10px; transition: 0.2s; font-size: 1.2rem; }
         .btn-del:hover { color: var(--danger-btn); }
 
-        .sticky-bottom-input { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-deep); padding: 15px; border-top: 1px solid rgba(255,255,255,0.1); z-index: 100; }
-        
-        .site-chip { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #ced4da; padding: 4px 10px; border-radius: 15px; font-size: 0.75rem; cursor: pointer; margin-right: 5px; margin-bottom: 5px; display: inline-block; }
-        .site-chip:hover { background: rgba(92, 124, 250, 0.3); border-color: var(--primary-accent); color: white; }
+        /* 프로그레스 바 */
+        .progress-container { background: #131722; border-radius: 10px; height: 16px; overflow: hidden; position: relative; margin-top: 8px; }
+        .progress-fill { background: var(--primary-accent); height: 100%; width: 0%; transition: width 0.4s ease-out; }
+
+        /* 팝업(Modal) 오버레이 */
+        #addTaskModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(2px); animation: fadeIn 0.2s; }
+        .modal-box { background: var(--card-bg); padding: 25px; border-radius: 20px; width: 90%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
 
-<div class="container pb-5">
-    
-    <div class="t5-card">
-        <h6 class="fw-bold mb-3"><i class="bi bi-search me-2"></i>현장 불러오기 / 생성</h6>
-        <div class="d-flex gap-2 mb-2">
-            <input type="text" id="searchSiteInput" class="form-control input-dark py-2" placeholder="현장명을 입력하세요">
-            <button class="btn-primary-custom px-3 fw-bold" onclick="loadSiteData()">불러오기</button>
-        </div>
-        <div id="recent-sites-container" class="mt-2">
-            </div>
-    </div>
+<div class="app-wrapper">
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
-    <div id="main-content-area" style="display: none;">
-        <div class="header-box">
-            <div>
-                <h4 class="fw-bold m-0" id="displaySiteName" style="color:var(--primary-accent);">현장명</h4>
-                <p class="small text-secondary mt-1 m-0">마감 펀치리스트</p>
+    <nav class="sidebar" id="sidebar">
+        <div class="p-4 text-center border-bottom border-secondary border-opacity-10 mt-2">
+            <img src="kimmoksu_main_logo.png" alt="로고" style="max-width: 140px; cursor: pointer;" onclick="location.href='index.html'">
+        </div>
+        <div class="flex-grow-1 mt-3">
+            <div class="nav-link" onclick="location.href='index.html'"><i class="bi bi-house-door"></i> 홈</div>
+            <div class="nav-link" onclick="location.href='index.html'"><i class="bi bi-journal-check"></i> 작업일보</div>
+            <div class="nav-link" onclick="location.href='index.html'"><i class="bi bi-calculator"></i> T5 계산기</div>
+            <div class="nav-link active"><i class="bi bi-ui-checks"></i> 마감 체크리스트</div>
+        </div>
+        <div class="p-4 border-top border-secondary border-opacity-10 mt-auto">
+            <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-person-circle fs-3 me-3" style="color:var(--primary-accent);"></i>
+                <div class="flex-grow-1 overflow-hidden">
+                    <div id="userNickDisplay" class="fw-bold text-truncate">사용자</div>
+                    <div class="small text-secondary" style="font-size:0.7rem;">Kimmoksu Pro</div>
+                </div>
             </div>
-            <div class="writer-badge" id="displayWriter">작성자</div>
+        </div>
+    </nav>
+
+    <main class="main-container">
+        
+        <div id="view-list">
+            <h3 class="fw-bold mb-4">마감 펀치리스트</h3>
+            
+            <div class="t5-card">
+                <div class="d-flex gap-2">
+                    <input type="text" id="searchSiteInput" class="form-control input-dark py-2" placeholder="현장명을 입력하세요">
+                    <button class="btn-primary-custom px-4" onclick="createOrLoadSite()">생성</button>
+                </div>
+                <p class="small text-secondary mt-2 mb-0 ms-1">* 새로운 현장명을 치고 '생성'을 누르면 방이 개설됩니다.</p>
+            </div>
+
+            <h5 class="fw-bold mt-5 mb-3"><i class="bi bi-archive me-2"></i>최근 진행 현장 (우리팀)</h5>
+            <div id="history-list" class="row g-3">
+                </div>
         </div>
 
-        <div class="progress-container">
-            <div id="progressBar" class="progress-fill"></div>
-            <div id="progressText" class="progress-text">0% (0/0)</div>
+        <div id="view-detail" style="display: none;">
+            <div class="d-flex justify-content-between align-items-start mb-4">
+                <div>
+                    <button class="btn btn-link text-secondary p-0 mb-2 text-decoration-none" onclick="goBack()"><i class="bi bi-arrow-left me-1"></i> 목록으로</button>
+                    <h4 class="fw-bold m-0" id="detailSiteName" style="color:var(--primary-accent);">현장명</h4>
+                    <p class="text-secondary small mt-1 mb-0">마감 펀치리스트 <span id="detailWriter" class="ms-1" style="color:#8b95a1;">(작성자: )</span></p>
+                </div>
+                <button class="round-add-btn" onclick="openAddModal()"><i class="bi bi-plus-lg"></i></button>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-end mb-2 px-1">
+                <span class="small fw-bold text-white">마감 달성률</span>
+                <span class="small text-secondary" id="detailProgressText">0% (0/0)</span>
+            </div>
+            <div class="progress-container mb-4" style="height: 6px;">
+                <div id="detailProgressBar" class="progress-fill"></div>
+            </div>
+
+            <div id="checklist-container">
+                </div>
+            <div style="height: 80px;"></div>
         </div>
 
-        <div id="checklist-container" class="mt-4">
-            </div>
-    </div>
-    
-    <div style="height: 100px;"></div>
+    </main>
+
+    <button class="mobile-menu-btn" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
 </div>
 
-<div class="sticky-bottom-input" id="bottom-input-area" style="display: none;">
-    <div class="container">
+<div id="addTaskModal">
+    <div class="modal-box">
+        <h5 class="fw-bold mb-3">새로운 마감 항목</h5>
+        <input type="text" id="newTaskInput" class="form-control input-dark py-3 mb-4" placeholder="예: 거실 걸레받이 실리콘 마감">
         <div class="d-flex gap-2">
-            <input type="text" id="newTaskInput" class="form-control input-dark py-2" placeholder="새로운 마감 항목 입력...">
-            <button class="btn-primary-custom px-3 fw-bold" onclick="addTask()"><i class="bi bi-plus-lg"></i></button>
+            <button class="btn btn-secondary py-2 w-50 fw-bold" style="background:#4b5563; border:none;" onclick="closeAddModal()">취소</button>
+            <button class="btn btn-primary py-2 w-50 fw-bold" style="background:var(--primary-accent); border:none;" onclick="saveNewTask()">추가</button>
         </div>
     </div>
 </div>
 
 <script>
-    let myEmail, userNickname;
+    let myEmail, userNickname, myTeamId;
     let currentSite = "";
-    let unsubscribe = null; // 파이어베이스 리스너 관리용
+    let listListener = null;
+    let detailListener = null;
 
-    // 로그인 체크
+    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); document.getElementById('sidebarOverlay').classList.toggle('active'); }
+
+    // 인증 및 팀 확인 (index.html과 동일한 보안)
     auth.onAuthStateChanged(async user => {
         if (user) {
             myEmail = user.email;
             const uDoc = await db.collection("users").doc(myEmail).get();
             userNickname = uDoc.exists ? uDoc.data().nickname : "관리자";
-            document.getElementById('displayWriter').innerText = userNickname;
-            loadRecentSites(); // 최근 현장 버튼들 불러오기
+            document.getElementById('userNickDisplay').innerText = userNickname;
+            
+            const q = await db.collection("teams").where("members", "array-contains", myEmail).get();
+            if (!q.empty) { 
+                myTeamId = q.docs[0].id; 
+                loadSummaryCards(); // 팀이 확인되면 요약 리스트 로드
+            } else {
+                alert("소속된 팀이 없습니다. 홈 화면에서 팀을 먼저 개설해주세요.");
+                location.href = "index.html";
+            }
         } else {
-            alert("로그인이 필요합니다. 메인 화면으로 이동합니다.");
+            alert("로그인이 필요합니다.");
             location.href = "index.html";
         }
     });
 
-    // 1. 최근 현장 목록 불러오기 (중복 제거)
-    function loadRecentSites() {
-        db.collection("punch_lists").orderBy("createdAt", "desc").limit(30).get().then(qs => {
-            let sites = new Set();
-            qs.forEach(doc => { if(doc.data().siteName) sites.add(doc.data().siteName); });
-            
-            const container = document.getElementById('recent-sites-container');
-            container.innerHTML = Array.from(sites).slice(0, 5).map(site => 
-                `<span class="site-chip" onclick="loadSiteData('${site}')">${site}</span>`
-            ).join('');
-        });
-    }
-
-    // 2. 특정 현장 불러오기 (리스너 연결)
-    function loadSiteData(siteParam) {
-        const targetSite = siteParam || document.getElementById('searchSiteInput').value.trim();
-        if(!targetSite) return alert("불러올 현장명을 입력하세요.");
-        
-        currentSite = targetSite;
-        document.getElementById('searchSiteInput').value = currentSite;
-        document.getElementById('displaySiteName').innerText = currentSite;
-        
-        // 화면 보이기
-        document.getElementById('main-content-area').style.display = 'block';
-        document.getElementById('bottom-input-area').style.display = 'block';
-
-        // 기존에 켜져있던 실시간 연결 끄기
-        if(unsubscribe) unsubscribe();
-
-        // 새 현장 실시간 연결
-        unsubscribe = db.collection("punch_lists")
-            .where("siteName", "==", currentSite)
+    /* --- [화면 1] 요약 리스트 로드 로직 --- */
+    function loadSummaryCards() {
+        if(listListener) listListener(); // 중복 방지
+        // 팀의 모든 체크리스트 데이터를 가져와 현장별로 묶어줌
+        listListener = db.collection("punch_lists")
+            .where("teamId", "==", myTeamId)
             .onSnapshot(ss => {
-                let items = ss.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                let sitesData = {}; // { "진영현장": { total: 5, done: 3, lastAt: 123456... } }
                 
-                // 프로그레스 바 계산
-                updateProgressBar(items);
-
-                // 정렬: 안 끝난 것 먼저 -> 끝난 것 -> 생성순
-                items.sort((a, b) => {
-                    if (a.done === b.done) return b.createdAt - a.createdAt; // 최신글 위로
-                    return a.done ? 1 : -1; // 체크된 것(true)은 무조건 아래로(1)
+                ss.docs.forEach(doc => {
+                    const d = doc.data();
+                    if(!sitesData[d.siteName]) {
+                        sitesData[d.siteName] = { total: 0, done: 0, lastAt: 0, writer: d.writer };
+                    }
+                    sitesData[d.siteName].total++;
+                    if(d.done) sitesData[d.siteName].done++;
+                    if(d.createdAt > sitesData[d.siteName].lastAt) {
+                        sitesData[d.siteName].lastAt = d.createdAt; // 가장 최근에 업데이트된 시간
+                        sitesData[d.siteName].writer = d.writer; // 가장 마지막으로 등록한 사람 기준
+                    }
                 });
-                
-                renderList(items);
+
+                // 배열로 변환해서 최신순으로 정렬
+                const sortedSites = Object.keys(sitesData).map(key => ({
+                    name: key, ...sitesData[key]
+                })).sort((a, b) => b.lastAt - a.lastAt);
+
+                renderSummaryCards(sortedSites);
             });
     }
 
-    // 3. 프로그레스 바 업데이트 로직
-    function updateProgressBar(items) {
-        const total = items.length;
-        const doneCount = items.filter(item => item.done).length;
-        const pct = total === 0 ? 0 : Math.round((doneCount / total) * 100);
+    function renderSummaryCards(sites) {
+        const container = document.getElementById('history-list');
+        if(sites.length === 0) {
+            container.innerHTML = '<p class="text-secondary small ms-2">진행 중인 마감 현장이 없습니다.</p>';
+            return;
+        }
 
-        document.getElementById('progressBar').style.width = pct + '%';
-        document.getElementById('progressText').innerText = total === 0 ? '항목을 추가해주세요' : `${pct}% 완료 (${doneCount}/${total})`;
-        
-        // 100% 달성 시 색상 변경 (초록색)
-        if(pct === 100 && total > 0) {
-            document.getElementById('progressBar').style.background = 'var(--success-btn)';
-        } else {
-            document.getElementById('progressBar').style.background = 'var(--primary-accent)';
+        container.innerHTML = sites.map(s => {
+            const pct = s.total === 0 ? 0 : Math.round((s.done / s.total) * 100);
+            const barColor = pct === 100 ? 'var(--success-btn)' : 'var(--primary-accent)';
+            
+            // onEvent: 카드 클릭 시 디테일 화면으로, X 버튼 클릭 시 이벤트 버블링 막고 삭제
+            return `
+            <div class="col-md-6 col-lg-4">
+                <div class="summary-card" onclick="openDetailView('${s.name}', '${s.writer}')">
+                    <button class="summary-del-btn" onclick="event.stopPropagation(); deleteEntireSite('${s.name}')"><i class="bi bi-trash3-fill"></i> 삭제</button>
+                    <h6 class="fw-bold text-white mb-1">${s.name}</h6>
+                    <p class="small text-secondary mb-3"><i class="bi bi-person-fill"></i> 최근 작업: ${s.writer}</p>
+                    
+                    <div class="d-flex justify-content-between align-items-end mb-1">
+                        <span class="small" style="color:#adb5bd; font-size:0.75rem;">진행률 ${pct}%</span>
+                        <span class="small text-secondary" style="font-size:0.7rem;">${s.done} / ${s.total}</span>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-fill" style="width: ${pct}%; background: ${barColor};"></div>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    async function deleteEntireSite(siteName) {
+        if(confirm(`정말 '${siteName}' 현장의 체크리스트를 통째로 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+            const qs = await db.collection("punch_lists").where("teamId", "==", myTeamId).where("siteName", "==", siteName).get();
+            const batch = db.batch();
+            qs.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+            alert("현장 데이터가 삭제되었습니다.");
         }
     }
 
-    // 4. 화면 렌더링
-    function renderList(items) {
+    /* --- [화면 전환 로직] --- */
+    function createOrLoadSite() {
+        const val = document.getElementById('searchSiteInput').value.trim();
+        if(!val) return alert("현장명을 입력해주세요.");
+        openDetailView(val, userNickname);
+    }
+
+    function openDetailView(siteName, lastWriter) {
+        currentSite = siteName;
+        document.getElementById('view-list').style.display = 'none';
+        document.getElementById('view-detail').style.display = 'block';
+        
+        document.getElementById('detailSiteName').innerText = siteName;
+        document.getElementById('detailWriter').innerText = `(작성자: ${userNickname})`; // 현재 접속자 기준 표시
+        
+        loadDetailChecklist(siteName);
+    }
+
+    function goBack() {
+        if(detailListener) detailListener(); // 디테일 리스너 끄기
+        currentSite = "";
+        document.getElementById('searchSiteInput').value = "";
+        document.getElementById('view-detail').style.display = 'none';
+        document.getElementById('view-list').style.display = 'block';
+    }
+
+    /* --- [화면 2] 디테일 데이터 로드 및 렌더링 --- */
+    function loadDetailChecklist(siteName) {
+        if(detailListener) detailListener();
+        detailListener = db.collection("punch_lists")
+            .where("teamId", "==", myTeamId)
+            .where("siteName", "==", siteName)
+            .onSnapshot(ss => {
+                let items = ss.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                // 진행률 바 업데이트
+                const total = items.length;
+                const doneCount = items.filter(i => i.done).length;
+                const pct = total === 0 ? 0 : Math.round((doneCount / total) * 100);
+                
+                document.getElementById('detailProgressText').innerText = total === 0 ? "0% (0/0)" : `${pct}% (${doneCount}/${total})`;
+                document.getElementById('detailProgressBar').style.width = pct + '%';
+                document.getElementById('detailProgressBar').style.background = pct === 100 ? 'var(--success-btn)' : 'var(--primary-accent)';
+
+                // 정렬 (완료된 건 아래로)
+                items.sort((a, b) => {
+                    if (a.done === b.done) return b.createdAt - a.createdAt;
+                    return a.done ? 1 : -1;
+                });
+                
+                renderDetailList(items);
+            });
+    }
+
+    function renderDetailList(items) {
         const container = document.getElementById('checklist-container');
         if(items.length === 0) {
-            container.innerHTML = '<p class="text-center text-secondary mt-5">등록된 마감 항목이 없습니다.</p>';
+            container.innerHTML = '<div class="text-center p-5 text-secondary"><i class="bi bi-clipboard2-check fs-1"></i><p class="mt-3">우측 상단 [+] 버튼을 눌러<br>첫 마감 항목을 등록하세요.</p></div>';
             return;
         }
 
@@ -205,36 +339,36 @@
         `).join('');
     }
 
-    // 5. 항목 추가
-    async function addTask() {
-        const text = document.getElementById('newTaskInput').value.trim();
-        if(!text) return;
-        
-        await db.collection("punch_lists").add({
-            siteName: currentSite,
-            text: text,
-            done: false,
-            writer: userNickname,
-            createdAt: Date.now()
-        });
-        
+    /* --- [팝업 및 항목 제어 로직] --- */
+    function openAddModal() {
+        document.getElementById('addTaskModal').style.display = 'flex';
+        document.getElementById('newTaskInput').focus();
+    }
+    function closeAddModal() {
+        document.getElementById('addTaskModal').style.display = 'none';
         document.getElementById('newTaskInput').value = '';
     }
 
-    // 6. 상태 토글, 텍스트 수정, 삭제
-    async function toggleTask(id, currentStatus) {
-        await db.collection("punch_lists").doc(id).update({ done: !currentStatus });
+    async function saveNewTask() {
+        const text = document.getElementById('newTaskInput').value.trim();
+        if(!text) return alert("내용을 입력해주세요.");
+        
+        await db.collection("punch_lists").add({
+            teamId: myTeamId,
+            siteName: currentSite,
+            text: text,
+            done: false,
+            writer: userNickname, // 작성자 이름 자동 기입
+            createdAt: Date.now()
+        });
+        
+        closeAddModal(); // 입력 완료 후 팝업 닫기
     }
 
-    async function updateTaskText(id, newText) {
-        await db.collection("punch_lists").doc(id).update({ text: newText });
-    }
+    async function toggleTask(id, currentStatus) { await db.collection("punch_lists").doc(id).update({ done: !currentStatus }); }
+    async function updateTaskText(id, newText) { await db.collection("punch_lists").doc(id).update({ text: newText }); }
+    async function deleteTask(id) { if(confirm("항목을 지울까요?")) await db.collection("punch_lists").doc(id).delete(); }
 
-    async function deleteTask(id) {
-        if(confirm("이 항목을 삭제할까요?")) {
-            await db.collection("punch_lists").doc(id).delete();
-        }
-    }
 </script>
 </body>
 </html>
