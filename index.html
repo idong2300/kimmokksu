@@ -113,6 +113,12 @@
 
         #auth-overlay { position: fixed; inset: 0; background: var(--bg-deep); z-index: 9999; display: flex; align-items: center; justify-content: center; }
         .login-card { background: var(--card-bg); padding: 40px; border-radius: 24px; width: 100%; max-width: 380px; text-align: center; }
+        
+        /* 스크롤바 커스텀 (숨기거나 얇게) */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-deep); }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
     </style>
 </head>
 <body>
@@ -257,7 +263,12 @@
                     </div>
                     <p class="small text-secondary mt-2 mb-0 ms-1">* 새로운 현장명을 치고 '생성'을 누르면 방이 개설됩니다.</p>
                 </div>
-                <h5 class="fw-bold mt-5 mb-3"><i class="bi bi-archive me-2"></i>최근 진행 현장 (우리팀)</h5>
+                
+                <div class="d-flex justify-content-between align-items-center mt-5 mb-3 flex-wrap gap-2">
+                    <h5 class="fw-bold m-0 text-nowrap"><i class="bi bi-archive me-2"></i>최근 진행 현장</h5>
+                    <div id="punch-card-filter" class="d-flex gap-2 overflow-auto pb-1" style="flex-wrap: nowrap; -webkit-overflow-scrolling: touch;">
+                        </div>
+                </div>
                 <div id="punch-history-list" class="row g-3"></div>
             </div>
 
@@ -277,11 +288,9 @@
                     <span class="small fw-bold text-white">마감 달성률</span>
                     <span class="small text-secondary" id="detailProgressText">0% (0/0)</span>
                 </div>
-                <div class="progress-container mb-3" style="height: 6px;">
+                <div class="progress-container mb-4" style="height: 6px;">
                     <div id="detailProgressBar" class="progress-fill"></div>
                 </div>
-
-                <div id="punch-filter-container" class="mb-3 d-flex gap-2 overflow-auto pb-2 border-bottom border-secondary border-opacity-25"></div>
 
                 <div id="checklist-container"></div>
             </div>
@@ -449,8 +458,10 @@
     let currentSite = "";
     let punchListListener = null;
     let punchDetailListener = null;
-    let globalPunchItems = []; 
-    let activePunchFilter = "전체";
+    
+    // [수정 9] 바깥 현장 목록 필터용 전역 변수
+    let globalPunchSites = []; 
+    let activePunchCardFilter = "전체";
 
     let t5EditingId = null; let calculatedData = null;
     let siteEditingId = null; let siteModal;
@@ -489,7 +500,6 @@
                 const tDoc = q.docs[0]; myTeamId = tDoc.id; 
                 const tData = tDoc.data();
                 
-                // [마스터 권한 강제 부여] 소장님 이메일 무조건 에디터 처리
                 if(tData.owner === myEmail || myEmail === "idong2300@naver.com") myRole = "owner";
                 else if(tData.admins && tData.admins.includes(myEmail)) myRole = "admin";
                 else myRole = "member";
@@ -612,7 +622,7 @@
     function loadHistory() { 
         db.collection("monthly_logs").where("teamId","==", myTeamId).orderBy("updatedAt","desc").limit(10).onSnapshot(ss => { 
             document.getElementById('history-list').innerHTML = ss.docs.map(doc => { 
-                const d = doc.data(); const isOwner = (d.writer === userNickname); 
+                const d = doc.data(); const isOwner = (d.writer === userNickname || myRole === "owner"); 
                 let buttonsHTML = isOwner ? `<button class="t5-btn-small bg-secondary text-white" onclick="editLog('${doc.id}')">수정</button>` : '';
                 buttonsHTML += `<button class="t5-btn-small" style="background:var(--primary-accent); color:white;" onclick="copyLog('${doc.id}')">복사</button><button class="t5-btn-small bg-success text-white" onclick="exportToExcel('${doc.id}')">엑셀</button>`;
                 if(isOwner) buttonsHTML += `<button class="t5-btn-small bg-danger text-white" onclick="deleteLog('${doc.id}')">삭제</button>`;
@@ -633,13 +643,30 @@
         if(punchListListener) punchListListener(); 
         punchListListener = db.collection("punch_lists").where("teamId", "==", myTeamId).onSnapshot(ss => {
                 let sitesData = {}; ss.docs.forEach(doc => { const d = doc.data(); if(!sitesData[d.siteName]) sitesData[d.siteName] = { total: 0, done: 0, lastAt: 0, writer: d.writer }; sitesData[d.siteName].total++; if(d.done) sitesData[d.siteName].done++; if(d.createdAt > sitesData[d.siteName].lastAt) { sitesData[d.siteName].lastAt = d.createdAt; sitesData[d.siteName].writer = d.writer; } });
-                renderPunchSummaryCards(Object.keys(sitesData).map(key => ({ name: key, ...sitesData[key] })).sort((a, b) => b.lastAt - a.lastAt));
+                globalPunchSites = Object.keys(sitesData).map(key => ({ name: key, ...sitesData[key] })).sort((a, b) => b.lastAt - a.lastAt);
+                renderPunchCardFilterAndList();
             });
+    }
+
+    // [수정 9] 펀치리스트 외부(카드) 필터 로직
+    function renderPunchCardFilterAndList() {
+        const writers = ["전체", ...new Set(globalPunchSites.map(s => s.writer).filter(Boolean))];
+        document.getElementById('punch-card-filter').innerHTML = writers.map(w => `
+            <button class="btn btn-sm ${w === activePunchCardFilter ? 'btn-primary' : 'btn-outline-secondary border-secondary text-secondary'} rounded-pill px-3 text-nowrap" onclick="setPunchCardFilter('${w}')">${w}</button>
+        `).join('');
+
+        const filteredSites = activePunchCardFilter === "전체" ? globalPunchSites : globalPunchSites.filter(s => s.writer === activePunchCardFilter);
+        renderPunchSummaryCards(filteredSites);
+    }
+
+    function setPunchCardFilter(writer) {
+        activePunchCardFilter = writer;
+        renderPunchCardFilterAndList();
     }
 
     function renderPunchSummaryCards(sites) {
         const container = document.getElementById('punch-history-list');
-        if(sites.length === 0) return container.innerHTML = '<p class="text-secondary small ms-2">진행 중인 마감 현장이 없습니다.</p>';
+        if(sites.length === 0) return container.innerHTML = '<p class="text-secondary small ms-2">해당 작업자의 마감 현장이 없습니다.</p>';
         container.innerHTML = sites.map(s => {
             const pct = s.total === 0 ? 0 : Math.round((s.done / s.total) * 100); const barColor = pct === 100 ? 'var(--success-btn)' : 'var(--primary-accent)';
             return `<div class="col-md-6 col-lg-4"><div class="summary-card" onclick="openDetailView('${s.name}')"><button class="summary-del-btn" onclick="event.stopPropagation(); deleteEntirePunchSite('${s.name}')"><i class="bi bi-trash3-fill"></i> 삭제</button><h6 class="fw-bold text-white mb-1">${s.name}</h6><p class="small text-secondary mb-3"><i class="bi bi-person-fill"></i> 최근 작업: ${s.writer}</p><div class="d-flex justify-content-between align-items-end mb-1"><span class="small" style="color:#adb5bd; font-size:0.75rem;">진행률 ${pct}%</span><span class="small text-secondary" style="font-size:0.7rem;">${s.done} / ${s.total}</span></div><div class="progress-container"><div class="progress-fill" style="width: ${pct}%; background: ${barColor};"></div></div></div></div>`;
@@ -657,7 +684,7 @@
 
     function openDetailView(siteName) {
         currentSite = siteName; document.getElementById('view-list').style.display = 'none'; document.getElementById('view-detail').style.display = 'block';
-        document.getElementById('detailSiteName').innerText = siteName; activePunchFilter = "전체";
+        document.getElementById('detailSiteName').innerText = siteName;
         history.pushState({ page: 'checklist_detail', site: siteName }, "", `#checklist_detail`);
         loadDetailChecklist(siteName);
     }
@@ -682,27 +709,16 @@
     function loadDetailChecklist(siteName) {
         if(punchDetailListener) punchDetailListener();
         punchDetailListener = db.collection("punch_lists").where("teamId", "==", myTeamId).where("siteName", "==", siteName).onSnapshot(ss => {
-                globalPunchItems = ss.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                globalPunchItems.sort((a, b) => { if (a.done === b.done) return b.createdAt - a.createdAt; return a.done ? 1 : -1; });
-                renderPunchFilterAndList(); 
+                let items = ss.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                const total = items.length; const doneCount = items.filter(i => i.done).length; const pct = total === 0 ? 0 : Math.round((doneCount / total) * 100);
+                document.getElementById('detailProgressText').innerText = total === 0 ? "0% (0/0)" : `${pct}% (${doneCount}/${total})`;
+                document.getElementById('detailProgressBar').style.width = pct + '%'; document.getElementById('detailProgressBar').style.background = pct === 100 ? 'var(--success-btn)' : 'var(--primary-accent)';
+
+                items.sort((a, b) => { if (a.done === b.done) return b.createdAt - a.createdAt; return a.done ? 1 : -1; });
+                renderDetailList(items); 
             });
     }
-
-    function renderPunchFilterAndList() {
-        const writers = ["전체", ...new Set(globalPunchItems.map(i => i.writer))];
-        document.getElementById('punch-filter-container').innerHTML = writers.map(w => `
-            <button class="btn btn-sm ${w === activePunchFilter ? 'btn-primary' : 'btn-outline-secondary border-secondary text-secondary'} rounded-pill px-3 text-nowrap" onclick="setPunchFilter('${w}')">${w}</button>
-        `).join('');
-
-        const filteredItems = activePunchFilter === "전체" ? globalPunchItems : globalPunchItems.filter(i => i.writer === activePunchFilter);
-        const total = globalPunchItems.length; const doneCount = globalPunchItems.filter(i => i.done).length; const pct = total === 0 ? 0 : Math.round((doneCount / total) * 100);
-        document.getElementById('detailProgressText').innerText = total === 0 ? "0% (0/0)" : `${pct}% (${doneCount}/${total})`;
-        document.getElementById('detailProgressBar').style.width = pct + '%'; document.getElementById('detailProgressBar').style.background = pct === 100 ? 'var(--success-btn)' : 'var(--primary-accent)';
-
-        renderDetailList(filteredItems);
-    }
-
-    function setPunchFilter(writer) { activePunchFilter = writer; renderPunchFilterAndList(); }
 
     function renderDetailList(items) {
         const container = document.getElementById('checklist-container');
@@ -760,7 +776,7 @@
     function loadT5History() {
         db.collection("t5_logs").where("teamId","==", myTeamId).orderBy("updatedAt","desc").limit(20).onSnapshot(ss => {
             document.getElementById('t5-history-list').innerHTML = ss.docs.map(doc => {
-                const d = doc.data(); const isOwner = (d.writer === userNickname); 
+                const d = doc.data(); const isOwner = (d.writer === userNickname || myRole === "owner"); 
                 let modifyBtns = isOwner ? `<button class="t5-btn-small bg-secondary text-white" style="flex:1;" onclick="editT5Log('${doc.id}')">수정</button>` : '';
                 modifyBtns += `<button class="t5-btn-small bg-primary text-white" style="flex:1;" onclick="copyAndNewT5Log('${doc.id}')">복사</button>
                                <button class="t5-btn-small bg-success text-white" style="flex:1;" onclick="copyT5Order('${d.siteName}', '${d.resultText}')">발주용</button>`;
