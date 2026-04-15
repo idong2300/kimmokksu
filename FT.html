@@ -66,22 +66,15 @@
         .status-table { width: 100%; border-collapse: separate; border-spacing: 0 4px; table-layout: fixed; }
         .status-table th { color: #94a3b8; font-weight: 600; font-size: 0.82rem; padding: 12px 10px; border-bottom: 2px solid rgba(255,255,255,0.05); text-align: center; white-space: nowrap; }
         .status-table td { background: #1e222d; padding: 12px 10px; font-size: 0.88rem; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .mobile-site-card { background: var(--card-bg); border-radius: 12px; padding: 15px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
-        .mobile-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
-        .mobile-card-title { font-size: 1.05rem; font-weight: 700; color: var(--primary-accent); margin: 0; }
-        .mobile-card-date { font-size: 0.75rem; color: #94a3b8; font-weight: 600; }
-        .mobile-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; text-align: center; background: rgba(0,0,0,0.25); padding: 10px 5px; border-radius: 8px; }
-        .mobile-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; text-align: center; background: rgba(0,0,0,0.25); padding: 10px 5px; border-radius: 8px; }
-        .mobile-grid-label { font-size: 0.65rem; color: #94a3b8; margin-bottom: 3px; }
-        .mobile-grid-val { font-size: 0.85rem; color: #f8fafc; font-weight: bold; }
 
-        /* 공정표 CSS */
+        /* [수정 4] 공정표 CSS (월 표시 및 고정 너비) */
         .gantt-container { overflow-x: auto; background: #1e222d; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
         .gantt-table { margin: 0; white-space: nowrap; font-size: 0.75rem; border-collapse: separate; border-spacing: 0; }
-        .gantt-table th { padding: 5px 2px !important; font-weight: 600; color: #94a3b8; }
-        .gantt-table td { border: 1px solid rgba(255,255,255,0.05); padding: 2px !important; text-align: center; vertical-align: middle; }
-        .gantt-task-col { position: sticky; left: 0; background: var(--card-bg) !important; z-index: 10; min-width: 90px; text-align: left !important; border-right: 2px solid var(--primary-accent) !important; padding-left: 10px !important; }
-        .gantt-cell { cursor: pointer; min-width: 22px; transition: 0.1s; }
+        .gantt-table th, .gantt-table td { border: 1px solid rgba(255,255,255,0.05); padding: 5px !important; text-align: center; vertical-align: middle; }
+        /* 날짜 셀 너비 고정 */
+        .gantt-cell, .gantt-date-th { min-width: 35px; max-width: 35px; width: 35px; transition: 0.1s; cursor: pointer; }
+        .gantt-task-col { position: sticky; left: 0; background: var(--card-bg) !important; z-index: 10; min-width: 100px; text-align: left !important; border-right: 2px solid var(--primary-accent) !important; padding-left: 10px !important; }
+        .gantt-month-row th { background: #181b24; color: #ced4da; font-weight: bold; border-bottom: 2px solid rgba(255,255,255,0.1); }
         .gantt-cell:hover { background-color: rgba(255,255,255,0.1); }
         .day-sat { background-color: rgba(92, 124, 250, 0.08) !important; color: #5c7cfa !important; }
         .day-sun { background-color: rgba(224, 49, 49, 0.08) !important; color: #e03131 !important; }
@@ -99,13 +92,15 @@
         .g-yellow { background-color: rgba(245, 158, 11, 0.2) !important; color: #f59e0b !important; }
         .g-red { background-color: rgba(239, 68, 68, 0.2) !important; color: #ef4444 !important; }
 
-        /* 펀치리스트 CSS */
+        /* [수정 2] 펀치리스트 버튼 겹침 해결 CSS */
         .auto-resize-textarea { resize: none; overflow: hidden; min-height: 48px; line-height: 1.5; }
         .round-add-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--primary-accent); color: white; border: none; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; transition: 0.2s; flex-shrink: 0; }
-        .summary-card { background: #1e222d; border-radius: 12px; padding: 16px; border: 1px solid rgba(255,255,255,0.05); cursor: pointer; position: relative; transition: 0.2s; }
+        .summary-card { background: #1e222d; border-radius: 12px; padding: 16px; border: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: 0.2s; }
         .summary-card:hover { border-color: var(--primary-accent); }
-        .summary-del-btn { position: absolute; top: 12px; right: 12px; background: rgba(224, 49, 49, 0.1); color: var(--danger-btn); border: none; border-radius: 6px; padding: 4px 8px; font-size: 0.75rem; transition: 0.2s; }
+        /* 기존 position absolute 제거하고, Flex 레이아웃에 맞춰 패딩 조정 */
+        .summary-del-btn { background: rgba(224, 49, 49, 0.1); color: var(--danger-btn); border: none; border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; transition: 0.2s; white-space: nowrap; height: 28px; }
         .summary-del-btn:hover { background: var(--danger-btn); color: white; }
+        
         .check-item { display: flex; align-items: flex-start; padding: 15px; border-radius: 12px; background: #1e222d; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05); }
         .check-item.completed { opacity: 0.4; background: #131722; filter: grayscale(0.5); }
         .check-item.completed .item-text-area { text-decoration: line-through; color: #8b95a1; }
@@ -122,12 +117,17 @@
         .res-gap { color: #fcc419; font-weight: bold; font-size: 0.85rem; }
         .history-card { background: var(--card-bg); border-radius: 16px; padding: 18px; margin-bottom: 12px; position: relative; }
 
-        /* 메모장 CSS */
+        /* 메모장 & 연차 달력 CSS */
         .memo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
         .memo-card { background: #fff9db; color: #333; padding: 15px; border-radius: 8px; box-shadow: 2px 4px 10px rgba(0,0,0,0.1); position: relative; }
         .memo-card.shared { background: #e3f2fd; border-left: 4px solid #5c7cfa; }
+        
+        .cal-day-box { background: #1e222d; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; min-height: 80px; padding: 5px; cursor: pointer; transition: 0.2s; position: relative; display: flex; flex-direction: column; align-items: stretch; }
+        .cal-day-box:hover { border-color: var(--primary-accent); }
+        .cal-date-num { font-size: 0.8rem; font-weight: bold; color: #94a3b8; text-align: left; margin-bottom: 5px; }
+        .leave-badge { font-size: 0.7rem; padding: 2px 4px; border-radius: 4px; margin-bottom: 2px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-        #addTaskModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(2px); animation: fadeIn 0.2s; }
+        #addTaskModal, #ganttCreateModal, #leaveApplyModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(2px); animation: fadeIn 0.2s; }
         .modal-box { background: var(--card-bg); padding: 25px; border-radius: 20px; width: 90%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
 
         #auth-overlay { position: fixed; inset: 0; background: var(--bg-deep); z-index: 9999; display: flex; align-items: center; justify-content: center; }
@@ -261,35 +261,31 @@
                 <button class="btn btn-success fw-bold px-4" onclick="openSiteAddModal()">+ 현장 추가</button>
             </div>
 
-            <div class="row g-4 mb-5">
-                <div class="col-12 col-md-8">
-                    <div class="t5-card h-100">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h6 class="fw-bold m-0 text-warning"><i class="bi bi-bell-fill me-2"></i>공지사항 관리</h6>
-                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#noticeManagerCollapse">관리창 열기/접기</button>
-                        </div>
-                        <div class="collapse mt-3" id="noticeManagerCollapse">
-                            <div class="d-flex gap-2 mb-4 border-top border-secondary border-opacity-10 pt-3">
-                                <input type="text" id="input-notice" class="form-control input-dark" placeholder="새 공지 입력" onkeypress="if(event.keyCode===13) addBoardItem('notice')">
-                                <button class="btn btn-primary px-3 fw-bold text-nowrap" onclick="addBoardItem('notice')">추가</button>
-                            </div>
-                            <div id="manage-notice-list"></div>
-                        </div>
-                    </div>
+            <div class="t5-card mb-5">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold m-0"><i class="bi bi-gear-fill me-2 text-secondary"></i>공지 및 전달사항 관리</h6>
+                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#boardManagerCollapse">
+                        관리창 열기/접기
+                    </button>
                 </div>
-                <div class="col-12 col-md-4">
-                    <div class="t5-card h-100">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h6 class="fw-bold m-0 text-info"><i class="bi bi-chat-dots-fill me-2"></i>회의 전달내용</h6>
-                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#memoManagerCollapse">관리창 열기/접기</button>
+                
+                <div class="collapse mt-3" id="boardManagerCollapse">
+                    <div class="border-top border-secondary border-opacity-10 pt-3">
+                        <h6 class="fw-bold text-warning mb-2">공지사항</h6>
+                        <div class="d-flex gap-2 mb-3">
+                            <input type="text" id="input-notice" class="form-control input-dark" placeholder="새 공지 입력" onkeypress="if(event.keyCode===13) addBoardItem('notice')">
+                            <button class="btn btn-primary px-3 fw-bold text-nowrap" onclick="addBoardItem('notice')">추가</button>
                         </div>
-                        <div class="collapse mt-3" id="memoManagerCollapse">
-                            <div class="d-flex gap-2 mb-4 border-top border-secondary border-opacity-10 pt-3">
-                                <input type="text" id="input-memo" class="form-control input-dark" placeholder="새 전달 입력" onkeypress="if(event.keyCode===13) addBoardItem('memo')">
-                                <button class="btn btn-primary px-3 fw-bold text-nowrap" onclick="addBoardItem('memo')">추가</button>
-                            </div>
-                            <div id="manage-memo-list"></div>
+                        <div id="manage-notice-list" class="mb-4"></div>
+                        
+                        <hr class="border-secondary opacity-25">
+                        
+                        <h6 class="fw-bold text-info mb-2 mt-3">회의 전달내용</h6>
+                        <div class="d-flex gap-2 mb-3">
+                            <input type="text" id="input-memo" class="form-control input-dark" placeholder="새 전달사항 입력" onkeypress="if(event.keyCode===13) addBoardItem('memo')">
+                            <button class="btn btn-primary px-3 fw-bold text-nowrap" onclick="addBoardItem('memo')">추가</button>
                         </div>
+                        <div id="manage-memo-list"></div>
                     </div>
                 </div>
             </div>
@@ -300,7 +296,7 @@
         <section id="page-gantt" class="page-section">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h3 class="fw-bold m-0">현장 공정 & 추가 내역</h3>
-                <button class="btn btn-primary fw-bold" onclick="createNewProject()">+ 신규 공정표 생성</button>
+                <button class="btn btn-primary fw-bold" onclick="openGanttCreateModal()">+ 신규 현장 생성</button>
             </div>
 
             <div class="t5-card" id="ganttDashboard" style="display: none;">
@@ -311,17 +307,17 @@
                     <div class="col-md-7 text-md-end">
                         <button class="btn btn-sm btn-info me-1 px-3 fw-bold text-white" onclick="captureGantt()"><i class="bi bi-camera"></i> 캡처/공유</button>
                         <button class="btn btn-sm btn-success me-1 px-3 fw-bold" onclick="saveGantt()">💾 현재 상태 저장</button>
-                        <button class="btn btn-sm btn-outline-danger px-3" onclick="deleteGantt()">초기화/삭제</button>
+                        <button class="btn btn-sm btn-outline-danger px-3" onclick="deleteGantt()">삭제</button>
                     </div>
                 </div>
                 
                 <h6 class="fw-bold mt-2 mb-3 text-primary"><i class="bi bi-bar-chart-steps me-2"></i>실전 공정표 (Gantt)</h6>
-                <div id="captureArea" style="background-color: #2a2e39; padding: 10px; border-radius: 12px;">
-                    <div class="gantt-container mb-2">
+                <div id="captureArea" style="background-color: #1e222d; padding: 15px; border-radius: 12px; display: inline-block; min-width: 100%;">
+                    <div class="gantt-container" id="ganttScrollWrapper" style="background: transparent; border: none;">
                         <table class="table table-dark table-bordered gantt-table" id="ganttTable"></table>
                     </div>
                 </div>
-                <div class="d-flex justify-content-between mb-5 mt-2">
+                <div class="d-flex justify-content-between mb-5 mt-3">
                     <button class="btn btn-sm btn-outline-info" onclick="addGanttTaskRow()">+ 공종(행) 추가</button>
                     <button class="btn btn-sm btn-outline-secondary" onclick="addGanttDate()">일정 1일 연장 <i class="bi bi-arrow-right"></i></button>
                 </div>
@@ -465,41 +461,49 @@
         </section>
 
         <section id="page-leave" class="page-section">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h3 class="fw-bold m-0">팀원 연차 관리</h3>
-                <button class="btn btn-success fw-bold" onclick="addLeaveRecord()">+ 휴가 신청</button>
+            <h3 class="fw-bold mb-4">팀원 연차 현황</h3>
+            
+            <div class="t5-card p-3 mb-4">
+                <div class="d-flex justify-content-between align-items-center border-bottom border-secondary border-opacity-25 pb-3 mb-3">
+                    <h6 class="fw-bold text-white m-0"><i class="bi bi-calendar-check me-2"></i>이번 달 휴가 달력</h6>
+                    <span class="small text-secondary">* 날짜를 클릭하여 신청</span>
+                </div>
+                <div id="leaveCalendar" class="row g-2 text-center" style="font-size:0.8rem;"></div>
             </div>
             
             <div class="t5-card border border-warning border-opacity-50" id="leaveAdminPanel" style="display:none;">
-                <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex justify-content-between align-items-center cursor-pointer" data-bs-toggle="collapse" data-bs-target="#leaveAdminCollapse">
                     <h6 class="fw-bold text-warning m-0"><i class="bi bi-gear me-2"></i>[관리자용] 팀원 연차 설정</h6>
-                    <button class="btn btn-sm btn-outline-warning py-0" onclick="saveLeaveSettings()">설정 저장</button>
+                    <i class="bi bi-chevron-down text-warning"></i>
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-dark table-sm align-middle text-center mb-0">
-                        <thead class="text-secondary">
-                            <tr><th>이름</th><th>입사일</th><th>기본 부여</th></tr>
-                        </thead>
-                        <tbody id="leaveAdminBody"></tbody>
-                    </table>
+                <div class="collapse mt-3" id="leaveAdminCollapse">
+                    <div class="table-responsive">
+                        <table class="table table-dark table-sm align-middle text-center mb-0">
+                            <thead class="text-secondary">
+                                <tr><th>이름</th><th>입사일</th><th>기본 부여</th></tr>
+                            </thead>
+                            <tbody id="leaveAdminBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="text-end mt-3"><button class="btn btn-sm btn-outline-warning py-1" onclick="saveLeaveSettings()">설정 저장</button></div>
                 </div>
             </div>
 
             <div class="t5-card">
-                <h6 class="fw-bold mb-3"><i class="bi bi-person-check me-2"></i>우리팀 연차 현황</h6>
-                <div class="table-responsive">
-                    <table class="table table-dark table-sm align-middle text-center mb-0">
-                        <thead class="text-secondary">
-                            <tr><th>이름</th><th>올해 부여</th><th>사용</th><th>잔여</th></tr>
-                        </thead>
-                        <tbody id="leaveStatusBody"></tbody>
-                    </table>
+                <div class="d-flex justify-content-between align-items-center cursor-pointer" data-bs-toggle="collapse" data-bs-target="#leaveStatusCollapse">
+                    <h6 class="fw-bold m-0"><i class="bi bi-person-check me-2"></i>우리팀 남은 연차 현황</h6>
+                    <i class="bi bi-chevron-down"></i>
                 </div>
-            </div>
-            
-            <h6 class="fw-bold mt-5 mb-3 text-white"><i class="bi bi-calendar-check me-2"></i>최근 휴가 내역</h6>
-            <div class="t5-card p-3">
-                <div id="leaveHistoryList"></div>
+                <div class="collapse mt-3" id="leaveStatusCollapse">
+                    <div class="table-responsive">
+                        <table class="table table-dark table-sm align-middle text-center mb-0">
+                            <thead class="text-secondary">
+                                <tr><th>이름</th><th>올해 부여</th><th>사용</th><th>잔여</th></tr>
+                            </thead>
+                            <tbody id="leaveStatusBody"></tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -556,6 +560,58 @@
     <button class="mobile-menu-btn" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
 </div>
 
+<div class="modal fade" id="ganttCreateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="background: var(--card-bg); border-radius: 20px;">
+            <div class="modal-body p-4">
+                <h5 class="fw-bold mb-4">신규 현장 생성</h5>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="small text-secondary mb-1">현장명</label>
+                        <input type="text" id="newGanttName" class="form-control input-dark" placeholder="예: 일강이앤아이">
+                    </div>
+                    <div class="col-12">
+                        <label class="small text-secondary mb-1">착공일 (공사 시작일)</label>
+                        <input type="date" id="newGanttDate" class="form-control input-dark">
+                    </div>
+                </div>
+                <div class="d-flex gap-2 mt-4">
+                    <button class="btn btn-secondary w-50 py-2 fw-bold" data-bs-dismiss="modal">취소</button>
+                    <button class="btn btn-primary w-50 py-2 fw-bold" onclick="submitNewProject()">생성하기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="leaveApplyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="background: var(--card-bg); border-radius: 20px;">
+            <div class="modal-body p-4">
+                <h5 class="fw-bold mb-4">휴가 신청</h5>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="small text-secondary mb-1">선택된 날짜</label>
+                        <input type="text" id="applyLeaveDate" class="form-control input-dark fw-bold text-primary" readonly>
+                    </div>
+                    <div class="col-12">
+                        <label class="small text-secondary mb-1">종류 선택</label>
+                        <select id="applyLeaveType" class="form-select input-dark">
+                            <option value="1">종일 (1일)</option>
+                            <option value="0.5_am">오전 반차 (0.5일)</option>
+                            <option value="0.5_pm">오후 반차 (0.5일)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="d-flex gap-2 mt-4">
+                    <button class="btn btn-secondary w-50 py-2 fw-bold" data-bs-dismiss="modal">취소</button>
+                    <button class="btn btn-success w-50 py-2 fw-bold" onclick="submitLeaveRequest()">신청하기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="siteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg" style="background: var(--card-bg); border-radius: 20px;">
@@ -607,10 +663,14 @@
     // ----------------------------------------------------
     let myEmail, myTeamId, userNickname = "관리자";
     let isLoginMode = true; let myRole = "member"; 
-    let siteModal;
-    document.addEventListener("DOMContentLoaded", function() { siteModal = new bootstrap.Modal(document.getElementById('siteModal')); });
+    let siteModal, ganttModal, leaveModal;
     
-    // UI & Navigation
+    document.addEventListener("DOMContentLoaded", function() { 
+        siteModal = new bootstrap.Modal(document.getElementById('siteModal')); 
+        ganttModal = new bootstrap.Modal(document.getElementById('ganttCreateModal')); 
+        leaveModal = new bootstrap.Modal(document.getElementById('leaveApplyModal')); 
+    });
+    
     function showPage(pageId, el) {
         document.querySelectorAll('.page-section').forEach(p => p.classList.remove('active'));
         document.getElementById('page-' + pageId).classList.add('active');
@@ -633,9 +693,6 @@
         else showPage('home');
     });
 
-    // ----------------------------------------------------
-    // Auth & Firebase Load
-    // ----------------------------------------------------
     auth.onAuthStateChanged(async user => {
         if (user) {
             myEmail = user.email; document.getElementById('auth-overlay').style.display = 'none';
@@ -672,14 +729,11 @@
     // 1. 공지 & 전달사항 (Board)
     // ----------------------------------------------------
     function loadBoardMemos() {
-        // 기존 공지사항 데이터 연동 (notices 컬렉션)
         db.collection("notices").where("teamId", "==", myTeamId).orderBy("createdAt", "desc").onSnapshot(ss => {
             let notices = ss.docs.map(doc => ({ id: doc.id, text: doc.data().text, dateStr: new Date(doc.data().createdAt).toLocaleDateString().slice(5) }));
             document.getElementById('home-notice-list').innerHTML = notices.slice(0,5).map(n => `<div class="mb-1 text-truncate">• ${n.text}</div>`).join('') || '내용 없음';
             document.getElementById('manage-notice-list').innerHTML = notices.map(n => `<div class="board-item d-flex justify-content-between"><span>${n.text} <span class="small text-secondary ms-2">${n.dateStr}</span></span><button class="btn btn-sm text-danger p-0" onclick="delOldNotice('${n.id}')"><i class="bi bi-trash"></i></button></div>`).join('');
         });
-
-        // 신규 전달사항 연동 (board_memos 컬렉션)
         db.collection("board_memos").where("teamId", "==", myTeamId).where("type", "==", "memo").orderBy("createdAt", "desc").onSnapshot(ss => {
             let memos = ss.docs.map(doc => ({ id: doc.id, text: doc.data().text, dateStr: doc.data().dateStr }));
             document.getElementById('home-msg-list').innerHTML = memos.slice(0,5).map(n => `<div class="mb-1 text-truncate">• ${n.text}</div>`).join('') || '내용 없음';
@@ -689,12 +743,8 @@
 
     async function addBoardItem(type) {
         let input = document.getElementById(`input-${type}`); let text = input.value.trim(); if(!text) return;
-        if(type === 'notice') {
-            await db.collection("notices").add({ teamId: myTeamId, text: text, writer: userNickname, createdAt: Date.now() });
-        } else {
-            let today = new Date(); let dStr = `0${today.getMonth()+1}`.slice(-2)+"."+`0${today.getDate()}`.slice(-2);
-            await db.collection("board_memos").add({ teamId: myTeamId, type: type, text: text, dateStr: dStr, createdAt: Date.now() });
-        }
+        if(type === 'notice') { await db.collection("notices").add({ teamId: myTeamId, text: text, writer: userNickname, createdAt: Date.now() }); } 
+        else { let today = new Date(); let dStr = `0${today.getMonth()+1}`.slice(-2)+"."+`0${today.getDate()}`.slice(-2); await db.collection("board_memos").add({ teamId: myTeamId, type: type, text: text, dateStr: dStr, createdAt: Date.now() }); }
         input.value = '';
     }
     async function delOldNotice(id) { if(confirm("삭제할까요?")) await db.collection("notices").doc(id).delete(); }
@@ -710,42 +760,17 @@
         });
     }
     function renderAllSections(data) {
-        const sections = [
-            { key: 'ongoing', icon: 'bi-tools', title: '공사 진행 중', h: '<tr><th style="width:18%;">현장명</th><th style="width:12%;">착공일</th><th style="width:12%;">예정준공일</th><th style="width:12%;">소장</th><th style="width:12%;">디자이너</th><th style="width:12%;">싸인</th><th>비고</th><th style="width:60px;"></th></tr>' },
-            { key: 'scheduled', icon: 'bi-calendar-event', title: '공사 착공 예정', h: '<tr><th style="width:20%;">상호명</th><th style="width:15%;">착공예정</th><th style="width:15%;">준공예정</th><th style="width:15%;">예상소장</th><th>비고</th><th style="width:60px;"></th></tr>' },
-            { key: 'designing', icon: 'bi-palette', title: '디자인 진행 중', h: '<tr><th style="width:20%;">상호명</th><th style="width:15%;">디자인마감</th><th style="width:15%;">착공예정</th><th style="width:15%;">디자이너</th><th>비고</th><th style="width:60px;"></th></tr>' },
-            { key: 'pre-design', icon: 'bi-pencil-square', title: '디자인 예정', h: '<tr><th style="width:25%;">상호명</th><th style="width:20%;">마감시기</th><th>비고</th><th style="width:60px;"></th></tr>' }
-        ];
+        const sections = [{ key: 'ongoing', icon: 'bi-tools', title: '공사 진행 중', h: '<tr><th style="width:18%;">현장명</th><th style="width:12%;">착공일</th><th style="width:12%;">예정준공일</th><th style="width:12%;">소장</th><th style="width:12%;">디자이너</th><th style="width:12%;">싸인</th><th>비고</th><th style="width:60px;"></th></tr>' }, { key: 'scheduled', icon: 'bi-calendar-event', title: '공사 착공 예정', h: '<tr><th style="width:20%;">상호명</th><th style="width:15%;">착공예정</th><th style="width:15%;">준공예정</th><th style="width:15%;">예상소장</th><th>비고</th><th style="width:60px;"></th></tr>' }, { key: 'designing', icon: 'bi-palette', title: '디자인 진행 중', h: '<tr><th style="width:20%;">상호명</th><th style="width:15%;">디자인마감</th><th style="width:15%;">착공예정</th><th style="width:15%;">디자이너</th><th>비고</th><th style="width:60px;"></th></tr>' }, { key: 'pre-design', icon: 'bi-pencil-square', title: '디자인 예정', h: '<tr><th style="width:25%;">상호명</th><th style="width:20%;">마감시기</th><th>비고</th><th style="width:60px;"></th></tr>' }];
         document.getElementById('all-status-containers').innerHTML = sections.map(sec => {
             const items = data.filter(d => d.status === sec.key);
-            let tableRows = items.length === 0 ? `<tr><td colspan="10" class="text-secondary py-4">등록된 데이터가 없습니다.</td></tr>` : items.map(item => `
-                <tr>
-                    <td class="fw-bold" style="color:var(--primary-accent);">${item.siteName}</td>
-                    <td>${item.date1 || '-'}</td>
-                    ${sec.key !== 'pre-design' ? `<td>${item.date2 || '-'}</td>` : ''}
-                    ${sec.key === 'ongoing' ? `<td>${item.site_manager || '-'}</td><td>${item.designer || '-'}</td><td>${item.designer_sign || '-'}</td>` : ''}
-                    ${sec.key === 'scheduled' ? `<td>${item.site_manager || '-'}</td>` : ''}
-                    ${sec.key === 'designing' ? `<td>${item.designer || '-'}</td>` : ''}
-                    <td class="text-secondary text-start ps-3">${item.etc || '-'}</td>
-                    <td><i class="bi bi-pencil-square text-primary cursor-pointer" onclick="openSiteEditModal('${item.id}')"></i></td>
-                </tr>
-            `).join('');
+            let tableRows = items.length === 0 ? `<tr><td colspan="10" class="text-secondary py-4">등록된 데이터가 없습니다.</td></tr>` : items.map(item => `<tr><td class="fw-bold" style="color:var(--primary-accent);">${item.siteName}</td><td>${item.date1 || '-'}</td>${sec.key !== 'pre-design' ? `<td>${item.date2 || '-'}</td>` : ''}${sec.key === 'ongoing' ? `<td>${item.site_manager || '-'}</td><td>${item.designer || '-'}</td><td>${item.designer_sign || '-'}</td>` : ''}${sec.key === 'scheduled' ? `<td>${item.site_manager || '-'}</td>` : ''}${sec.key === 'designing' ? `<td>${item.designer || '-'}</td>` : ''}<td class="text-secondary text-start ps-3">${item.etc || '-'}</td><td><i class="bi bi-pencil-square text-primary cursor-pointer" onclick="openSiteEditModal('${item.id}')"></i></td></tr>`).join('');
             let cards = items.length === 0 ? `<p class="text-center text-secondary py-3 small" style="background:#1e222d; border-radius:12px;">등록된 데이터가 없습니다.</p>` : items.map(item => {
                 const btnHTML = `<div><button class="btn btn-sm text-primary p-1" onclick="openSiteEditModal('${item.id}')"><i class="bi bi-pencil-square"></i></button><button class="btn btn-sm text-danger p-1" onclick="deleteSite('${item.id}')"><i class="bi bi-trash3"></i></button></div>`;
-                let etcHTML = '';
-                if(item.etc) {
-                    if(sec.key === 'pre-design') etcHTML = `<div class="text-secondary small mt-2 text-truncate">${item.etc}</div>`;
-                    else { const cid = `etc-${item.id}`; etcHTML = `<div class="mobile-etc-btn" data-bs-toggle="collapse" data-bs-target="#${cid}">기타 메모 확인 <i class="bi bi-chevron-down"></i></div><div class="collapse" id="${cid}"><div class="mobile-etc-content">${item.etc}</div></div>`; }
-                }
-                if(sec.key === 'ongoing') {
-                    return `<div class="mobile-site-card"><div class="mobile-card-header"><h6 class="mobile-card-title">${item.siteName}</h6><div class="d-flex align-items-center"><span class="mobile-card-date me-3">${item.date1 || '-'} ~ ${item.date2 || '-'}</span>${btnHTML}</div></div><div class="mobile-grid-3"><div><div class="mobile-grid-label">담당소장</div><div class="mobile-grid-val">${item.site_manager || '-'}</div></div><div><div class="mobile-grid-label">디자이너</div><div class="mobile-grid-val">${item.designer || '-'}</div></div><div><div class="mobile-grid-label">싸인담당</div><div class="mobile-grid-val">${item.designer_sign || '-'}</div></div></div>${etcHTML}</div>`;
-                } else if(sec.key === 'scheduled') {
-                    return `<div class="mobile-site-card"><div class="mobile-card-header"><h6 class="mobile-card-title">${item.siteName}</h6><div class="d-flex align-items-center"><span class="mobile-card-date me-3">예상소장: <span class="text-white">${item.site_manager || '-'}</span></span>${btnHTML}</div></div><div class="text-center" style="background: rgba(0,0,0,0.25); padding: 10px; border-radius: 8px; font-size: 0.85rem;"><span class="text-secondary me-1">착공예정</span> <span class="text-white fw-bold me-3">${item.date1 || '-'}</span><span class="text-secondary me-1">준공예정</span> <span class="text-white fw-bold">${item.date2 || '-'}</span></div>${etcHTML}</div>`;
-                } else if(sec.key === 'designing') {
-                    return `<div class="mobile-site-card"><div class="mobile-card-header"><h6 class="mobile-card-title">${item.siteName}</h6><div class="d-flex align-items-center"><span class="mobile-card-date me-3">디자이너: <span class="text-white">${item.designer || '-'}</span></span>${btnHTML}</div></div><div class="mobile-grid-2"><div><div class="mobile-grid-label">디자인 마감일</div><div class="mobile-grid-val">${item.date1 || '-'}</div></div><div><div class="mobile-grid-label">착공 예정일</div><div class="mobile-grid-val">${item.date2 || '-'}</div></div></div>${etcHTML}</div>`;
-                } else {
-                    return `<div class="mobile-site-card"><div class="mobile-card-header mb-1"><h6 class="mobile-card-title">${item.siteName}</h6><div class="d-flex align-items-center"><span class="mobile-card-date me-3">마감: <span class="text-white">${item.date1 || '-'}</span></span>${btnHTML}</div></div>${etcHTML}</div>`;
-                }
+                let etcHTML = ''; if(item.etc) { if(sec.key === 'pre-design') etcHTML = `<div class="text-secondary small mt-2 text-truncate">${item.etc}</div>`; else { const cid = `etc-${item.id}`; etcHTML = `<div class="mobile-etc-btn" data-bs-toggle="collapse" data-bs-target="#${cid}">기타 메모 확인 <i class="bi bi-chevron-down"></i></div><div class="collapse" id="${cid}"><div class="mobile-etc-content">${item.etc}</div></div>`; } }
+                if(sec.key === 'ongoing') return `<div class="mobile-site-card"><div class="mobile-card-header"><h6 class="mobile-card-title">${item.siteName}</h6><div class="d-flex align-items-center"><span class="mobile-card-date me-3">${item.date1 || '-'} ~ ${item.date2 || '-'}</span>${btnHTML}</div></div><div class="mobile-grid-3"><div><div class="mobile-grid-label">담당소장</div><div class="mobile-grid-val">${item.site_manager || '-'}</div></div><div><div class="mobile-grid-label">디자이너</div><div class="mobile-grid-val">${item.designer || '-'}</div></div><div><div class="mobile-grid-label">싸인담당</div><div class="mobile-grid-val">${item.designer_sign || '-'}</div></div></div>${etcHTML}</div>`;
+                else if(sec.key === 'scheduled') return `<div class="mobile-site-card"><div class="mobile-card-header"><h6 class="mobile-card-title">${item.siteName}</h6><div class="d-flex align-items-center"><span class="mobile-card-date me-3">예상소장: <span class="text-white">${item.site_manager || '-'}</span></span>${btnHTML}</div></div><div class="text-center" style="background: rgba(0,0,0,0.25); padding: 10px; border-radius: 8px; font-size: 0.85rem;"><span class="text-secondary me-1">착공예정</span> <span class="text-white fw-bold me-3">${item.date1 || '-'}</span><span class="text-secondary me-1">준공예정</span> <span class="text-white fw-bold">${item.date2 || '-'}</span></div>${etcHTML}</div>`;
+                else if(sec.key === 'designing') return `<div class="mobile-site-card"><div class="mobile-card-header"><h6 class="mobile-card-title">${item.siteName}</h6><div class="d-flex align-items-center"><span class="mobile-card-date me-3">디자이너: <span class="text-white">${item.designer || '-'}</span></span>${btnHTML}</div></div><div class="mobile-grid-2"><div><div class="mobile-grid-label">디자인 마감일</div><div class="mobile-grid-val">${item.date1 || '-'}</div></div><div><div class="mobile-grid-label">착공 예정일</div><div class="mobile-grid-val">${item.date2 || '-'}</div></div></div>${etcHTML}</div>`;
+                else return `<div class="mobile-site-card"><div class="mobile-card-header mb-1"><h6 class="mobile-card-title">${item.siteName}</h6><div class="d-flex align-items-center"><span class="mobile-card-date me-3">마감: <span class="text-white">${item.date1 || '-'}</span></span>${btnHTML}</div></div>${etcHTML}</div>`;
             }).join('');
             return `<div class="mb-5"><div class="d-flex justify-content-between align-items-center mb-3"><h5 class="fw-bold m-0"><i class="bi ${sec.icon} me-2 text-primary"></i>${sec.title} <span class="badge rounded-pill bg-dark ms-2" style="font-size:0.7rem;">${items.length}건</span></h5><button class="btn btn-sm btn-outline-success px-3 fw-bold" onclick="openSiteAddModal('${sec.key}')">+ 추가</button></div><div class="d-none d-md-block t5-card p-0 overflow-hidden"><table class="status-table"><thead>${sec.h}</thead><tbody>${tableRows}</tbody></table></div><div class="d-md-none">${cards}</div></div>`;
         }).join('');
@@ -758,25 +783,44 @@
     async function deleteSite(id) { if(confirm("삭제하시겠습니까?")) await db.collection("site_status").doc(id).delete(); }
 
     // ----------------------------------------------------
-    // 3. 공정표 & 추가공사 (Gantt)
+    // 3. 공정표 & 추가공사 [수정 4 - 월별 셀 병합 및 고정 너비]
     // ----------------------------------------------------
     let ganttTasks = ["철거", "목공", "전기", "필름", "도장", "소방", "가구", "바닥", "유리", "금속", "사인", "설비", "청소", "기타 잔손"];
     let ganttDates = []; let ganttState = {}; let currentGanttId = null;
 
-    function createNewProject() {
-        let sd = prompt("시작일을 8자리 숫자로 입력하세요 (예: 20260420)");
-        if(!sd || sd.length !== 8) return;
-        let start = new Date(sd.substring(0,4), parseInt(sd.substring(4,6))-1, sd.substring(6,8));
-        ganttDates = []; ganttState = {}; currentGanttId = null; document.getElementById('ganttSiteName').value = '';
+    function openGanttCreateModal() {
+        document.getElementById('newGanttName').value = '';
+        document.getElementById('newGanttDate').value = '';
+        ganttModal.show();
+    }
+
+    function submitNewProject() {
+        let name = document.getElementById('newGanttName').value.trim();
+        let dateVal = document.getElementById('newGanttDate').value;
+        if(!name || !dateVal) return alert("현장명과 착공일을 모두 입력하세요.");
+        
+        let start = new Date(dateVal);
+        ganttDates = []; ganttState = {}; currentGanttId = null; 
+        document.getElementById('ganttSiteName').value = name;
+        
         for(let i=0; i<45; i++) { let dt = new Date(start); dt.setDate(start.getDate()+i); ganttDates.push(dt); }
-        document.getElementById('ganttDashboard').style.display = 'block'; document.getElementById('extraCostBody').innerHTML = '';
-        calcExtraSum(); renderGantt();
+        document.getElementById('ganttDashboard').style.display = 'block'; 
+        document.getElementById('extraCostBody').innerHTML = ''; calcExtraSum(); renderGantt();
+        ganttModal.hide();
     }
 
     function renderGantt() {
         if(ganttDates.length === 0) return;
-        const thead = ganttDates.map(d => `<th class="${d.getDay()===0?'day-sun':(d.getDay()===6?'day-sat':'')}">${d.getMonth()+1}/${d.getDate()}</th>`).join('');
-        let html = `<thead><tr><th class="gantt-task-col text-secondary">공종 (클릭 수정)</th>${thead}</tr></thead><tbody>`;
+        
+        // 월별 병합 계산
+        let monthCounts = []; let currentMonth = ganttDates[0].getMonth(); let count = 0;
+        ganttDates.forEach(d => { if(d.getMonth() === currentMonth) { count++; } else { monthCounts.push({m: currentMonth, c: count}); currentMonth = d.getMonth(); count = 1; } });
+        monthCounts.push({m: currentMonth, c: count});
+        
+        let monthHtml = `<tr class="gantt-month-row"><th class="gantt-task-col bg-dark" style="border-right:2px solid var(--primary-accent) !important;">월 구분</th>` + monthCounts.map(mc => `<th colspan="${mc.c}" class="text-center text-white" style="background:#2a2e39;">${mc.m + 1}월</th>`).join('') + `</tr>`;
+        const thead = ganttDates.map(d => `<th class="gantt-date-th ${d.getDay()===0?'day-sun':(d.getDay()===6?'day-sat':'')}">${d.getDate()}</th>`).join('');
+        
+        let html = `<thead>${monthHtml}<tr><th class="gantt-task-col text-secondary">공종 (클릭 수정)</th>${thead}</tr></thead><tbody>`;
         ganttTasks.forEach((task, tIdx) => {
             html += `<tr><td class="gantt-task-col"><input type="text" class="task-editable" value="${task}" onchange="ganttTasks[${tIdx}]=this.value"></td>`;
             ganttDates.forEach((d, dIdx) => {
@@ -790,9 +834,23 @@
     function addGanttTaskRow() { ganttTasks.push("새 공종"); renderGantt(); }
     function addGanttDate() { let lastD = new Date(ganttDates[ganttDates.length-1]); lastD.setDate(lastD.getDate() + 1); ganttDates.push(lastD); renderGantt(); }
 
+    // [수정 4] 캡처 짤림 방지 (overflow 처리)
     function captureGantt() {
-        html2canvas(document.getElementById('captureArea'), { backgroundColor: '#2a2e39', scale: 2 }).then(canvas => {
-            let link = document.createElement('a'); link.download = `${document.getElementById('ganttSiteName').value||'현장'}_공정표.png`; link.href = canvas.toDataURL(); link.click();
+        const captureArea = document.getElementById('captureArea');
+        const scrollWrapper = document.getElementById('ganttScrollWrapper');
+        let siteName = document.getElementById('ganttSiteName').value.trim() || '현장';
+        
+        // 강제로 넓혀서 짤림 방지
+        const origOverflow = scrollWrapper.style.overflowX;
+        scrollWrapper.style.overflowX = 'visible';
+        captureArea.style.width = 'max-content';
+
+        html2canvas(captureArea, { backgroundColor: '#1e222d', scale: 2 }).then(canvas => {
+            scrollWrapper.style.overflowX = origOverflow;
+            captureArea.style.width = '100%';
+            let link = document.createElement('a'); 
+            link.download = `${siteName}_예상_공정표.png`; 
+            link.href = canvas.toDataURL(); link.click();
         });
     }
 
@@ -859,7 +917,6 @@
         }).join(''); bindLongPress();
     }
     
-    // [수정 3, 4] 주말 글씨색 및 공수 바탕색 복구
     function loopDays(y, m, s, e, type, tIdx, wIdx, max=31) { 
         let html=""; 
         for(let d=s; d<=e; d++){ 
@@ -882,7 +939,6 @@
     function removeWorker(t, w) { if(confirm("삭제?")){ teamData[t].workers.splice(w,1); renderAllTeams(); } }
     async function saveMonthlyLog() { const m = document.getElementById('logMonth').value, s = document.getElementById('siteName').value; if(!s) return; const d = { teamId:myTeamId, month:m, site:s, teamData, updatedAt:Date.now(), lastModifier:userNickname }; if(editingId) await db.collection("monthly_logs").doc(editingId).update(d); else await db.collection("monthly_logs").add({...d, originalWriter:userNickname}); alert("저장 완료"); location.reload(); }
     
-    // [수정 5] 하단 4개 버튼 완전 복구
     function loadWorklogs() { 
         db.collection("monthly_logs").where("teamId","==",myTeamId).orderBy("updatedAt","desc").limit(10).onSnapshot(ss => { 
             document.getElementById('history-list').innerHTML = ss.docs.map(doc => { 
@@ -900,13 +956,12 @@
     async function deleteLog(id) { if(confirm("이 작업일보를 완전히 삭제할까요?")) { await db.collection("monthly_logs").doc(id).delete(); } }
 
     // ----------------------------------------------------
-    // 5. 펀치리스트 (삭제/디자인 복구)
+    // 5. 펀치리스트 (삭제/디자인 복구) [수정 2, 6]
     // ----------------------------------------------------
     let currentSite = ""; let punchListListener = null; let punchDetailListener = null; let globalPunchSites = []; let activePunchCardFilter = "전체"; let globalPunchItems = []; let activePunchFilter = "전체";
     function loadPunchSummaryCards() { if(!myTeamId) return; if(punchListListener) punchListListener(); punchListListener = db.collection("punch_lists").where("teamId", "==", myTeamId).onSnapshot(ss => { let sitesData = {}; ss.docs.forEach(doc => { const d = doc.data(); if(!sitesData[d.siteName]) sitesData[d.siteName] = { total: 0, done: 0, lastAt: 0, writer: d.writer }; sitesData[d.siteName].total++; if(d.done) sitesData[d.siteName].done++; if(d.createdAt > sitesData[d.siteName].lastAt) { sitesData[d.siteName].lastAt = d.createdAt; sitesData[d.siteName].writer = d.writer; } }); globalPunchSites = Object.keys(sitesData).map(key => ({ name: key, ...sitesData[key] })).sort((a, b) => b.lastAt - a.lastAt); renderPunchCardFilterAndList(); }); }
     function renderPunchCardFilterAndList() { document.getElementById('punch-card-filter').innerHTML = ["전체", ...new Set(globalPunchSites.map(s => s.writer).filter(Boolean))].map(w => `<button class="btn btn-sm ${w === activePunchCardFilter ? 'btn-primary' : 'btn-outline-secondary text-secondary'} rounded-pill px-3" onclick="activePunchCardFilter='${w}'; renderPunchCardFilterAndList();">${w}</button>`).join(''); const filteredSites = activePunchCardFilter === "전체" ? globalPunchSites : globalPunchSites.filter(s => s.writer === activePunchCardFilter); 
-        // [수정 6] 삭제 버튼 (.summary-del-btn) 복구
-        document.getElementById('punch-history-list').innerHTML = filteredSites.map(s => { const pct = s.total === 0 ? 0 : Math.round((s.done / s.total) * 100); return `<div class="col-md-6 col-lg-4"><div class="summary-card" onclick="openDetailView('${s.name}')"><button class="summary-del-btn" onclick="event.stopPropagation(); deleteEntirePunchSite('${s.name}')"><i class="bi bi-trash3-fill"></i> 삭제</button><h6 class="fw-bold text-white mb-1">${s.name}</h6><p class="small text-secondary mb-3"><i class="bi bi-person-fill"></i> ${s.writer}</p><div class="progress-container"><div class="progress-fill" style="width: ${pct}%;"></div></div></div></div>`; }).join(''); 
+        document.getElementById('punch-history-list').innerHTML = filteredSites.map(s => { const pct = s.total === 0 ? 0 : Math.round((s.done / s.total) * 100); return `<div class="col-md-6 col-lg-4"><div class="summary-card" onclick="openDetailView('${s.name}')"><div class="d-flex justify-content-between align-items-start mb-2"><div><h6 class="fw-bold text-white mb-1">${s.name}</h6><p class="small text-secondary mb-0"><i class="bi bi-person-fill"></i> ${s.writer}</p></div><button class="summary-del-btn" onclick="event.stopPropagation(); deleteEntirePunchSite('${s.name}')"><i class="bi bi-trash3-fill"></i> 삭제</button></div><div class="d-flex justify-content-between align-items-end mb-1 mt-3"><span class="small" style="color:#adb5bd; font-size:0.75rem;">진행률 ${pct}%</span><span class="small text-secondary" style="font-size:0.7rem;">${s.done} / ${s.total}</span></div><div class="progress-container"><div class="progress-fill" style="width: ${pct}%;"></div></div></div></div>`; }).join(''); 
     }
     async function deleteEntirePunchSite(siteName) { if(confirm(`정말 '${siteName}' 현장을 삭제하시겠습니까?`)) { const qs = await db.collection("punch_lists").where("teamId", "==", myTeamId).where("siteName", "==", siteName).get(); const batch = db.batch(); qs.forEach(doc => batch.delete(doc.ref)); await batch.commit(); } }
     function createOrLoadSite() { const val = document.getElementById('searchSiteInput').value.trim(); if(val) openDetailView(val); }
@@ -936,7 +991,6 @@
     }
     async function saveT5ToHistory() { if(!calculatedData) return; const data = { teamId: myTeamId, ...calculatedData, writer: userNickname, updatedAt: Date.now() }; if (t5EditingId) await db.collection("t5_logs").doc(t5EditingId).update(data); else await db.collection("t5_logs").add({...data, createdAt: Date.now()}); location.reload(); }
     
-    // [수정 7] T5 4대 버튼 복구
     function loadT5History() { 
         db.collection("t5_logs").where("teamId","==",myTeamId).orderBy("updatedAt","desc").limit(20).onSnapshot(ss => { 
             document.getElementById('t5-history-list').innerHTML = ss.docs.map(d => {
@@ -970,7 +1024,7 @@
     async function delMemo(id) { if(confirm("삭제?")) await db.collection("team_memos").doc(id).delete(); }
 
     // ----------------------------------------------------
-    // 8. 연차 관리 (Leave)
+    // 8. 연차 관리 (Leave) [수정 3]
     // ----------------------------------------------------
     let teamMembersInfo = {}; 
     function loadLeaveData(teamData) {
@@ -984,26 +1038,54 @@
         }
         
         db.collection("leave_records").where("teamId","==",myTeamId).onSnapshot(ss => {
-            let used = {}; ss.docs.forEach(doc => { let d = doc.data(); used[d.userEmail] = (used[d.userEmail]||0) + parseFloat(d.amount); });
+            let used = {}; let allRecords = [];
+            ss.docs.forEach(doc => { let d = doc.data(); used[d.userEmail] = (used[d.userEmail]||0) + parseFloat(d.amount); allRecords.push(d); });
+            
             document.getElementById('leaveStatusBody').innerHTML = (teamData.members||[]).map(mEmail => {
                 let info = teamMembersInfo[mEmail] || { joinDate: '-', base: 15 };
                 let usedAmt = used[mEmail] || 0; let remain = info.base - usedAmt;
                 return `<tr><td class="fw-bold">${mEmail.split('@')[0]}</td><td class="text-info">${info.base}</td><td class="text-danger">${usedAmt}</td><td class="text-success fw-bold">${remain}</td></tr>`;
             }).join('');
 
-            document.getElementById('leaveHistoryList').innerHTML = ss.docs.map(doc => `<div class="small mb-1">• ${doc.data().userEmail.split('@')[0]} : ${doc.data().date} (${doc.data().amount}일)</div>`).join('');
+            renderLeaveCalendar(allRecords);
         });
     }
+
+    function renderLeaveCalendar(records) {
+        let html = '';
+        let today = new Date();
+        for(let i=1; i<=31; i++) {
+            let dateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+            let matchRecs = records.filter(r => r.date === dateStr);
+            let badgeHtml = matchRecs.map(r => {
+                let txt = r.amount === 1 ? '종일' : (r.amount === 0.5 && r.type === 'am' ? '오전' : '오후');
+                return `<div class="leave-badge bg-primary text-white">${r.userEmail.split('@')[0]} (${txt}) ✅</div>`;
+            }).join('');
+            html += `<div class="col-3 col-md-2 col-lg-1 mb-2"><div class="cal-day-box" onclick="openLeaveModal('${dateStr}')"><div class="cal-date-num">${i}</div>${badgeHtml}</div></div>`;
+        }
+        document.getElementById('leaveCalendar').innerHTML = html;
+    }
+
+    function openLeaveModal(dateStr) {
+        document.getElementById('applyLeaveDate').value = dateStr;
+        leaveModal.show();
+    }
+
+    async function submitLeaveRequest() {
+        let d = document.getElementById('applyLeaveDate').value;
+        let tVal = document.getElementById('applyLeaveType').value;
+        let amt = tVal === '1' ? 1 : 0.5;
+        let typeStr = tVal === '1' ? 'full' : (tVal === '0.5_am' ? 'am' : 'pm');
+        
+        await db.collection("leave_records").add({ teamId: myTeamId, userEmail: myEmail, date: d, amount: amt, type: typeStr, createdAt: Date.now() }); 
+        leaveModal.hide();
+    }
+
     async function saveLeaveSettings() {
         let newInfo = {};
         document.querySelectorAll('.leave-join').forEach(el => { let email = el.getAttribute('data-email'); if(!newInfo[email]) newInfo[email]={}; newInfo[email].joinDate = el.value; });
         document.querySelectorAll('.leave-base').forEach(el => { let email = el.getAttribute('data-email'); if(!newInfo[email]) newInfo[email]={}; newInfo[email].base = parseFloat(el.value||15); });
         await db.collection("teams").doc(myTeamId).update({ membersInfo: newInfo }); alert("설정 저장 완료");
-    }
-    async function addLeaveRecord() {
-        let d = prompt("휴가 날짜 (예: 2026-05-10)"); if(!d) return;
-        let t = prompt("휴가 종류 입력 (1: 종일, 0.5: 반차)"); if(!t) return;
-        await db.collection("leave_records").add({ teamId: myTeamId, userEmail: myEmail, date: d, amount: parseFloat(t), createdAt: Date.now() }); alert("신청 완료");
     }
 
     // ----------------------------------------------------
@@ -1024,7 +1106,6 @@
         else document.getElementById('btnRegenCode').style.display = 'none';
         document.getElementById('displayTeamId').value = tData.inviteCode || '발급필요';
 
-        // 팀원 이름(닉네임) 불러오기
         const memberPromises = members.map(async mEmail => {
             let nick = "이름미상";
             try { const uDoc = await db.collection("users").doc(mEmail).get(); if(uDoc.exists) nick = uDoc.data().nickname; } catch(e){}
