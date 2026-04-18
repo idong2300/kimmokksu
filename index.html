@@ -7,7 +7,7 @@
     <meta property="og:type" content="website">
     <meta property="og:title" content="김목수이야기 - 통합 ERP 시스템">
     <meta property="og:description" content="현장 관리, 공정표, 작업일보, 연차 관리 통합 시스템">
-    <meta property="og:image" content="https://(소장님의웹사이트주소)/kimmoksu_main_logo.png">
+    <meta property="og:image" content="https://kimmoksu.github.io/kimmoksu_main_logo.png">
     <meta property="og:locale" content="ko_KR">
 
     <link rel="icon" href="favicon.png" type="image/png">
@@ -45,7 +45,6 @@
         .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1040; backdrop-filter: blur(2px); transition: 0.3s; opacity: 0; }
         .sidebar-overlay.active { display: block; opacity: 1; }
         
-        /* 💡 V22: 화이트(데이) 모드 팝업/모달창 예외처리 완벽 적용 💡 */
         body.light-mode { background-color: #f4f6f8; color: #212529; }
         body.light-mode .main-container, body.light-mode #auth-overlay { background-color: #f4f6f8; }
         body.light-mode .sidebar { background-color: #ffffff; border-right: 1px solid #dee2e6; }
@@ -103,17 +102,19 @@
             .compact-card h6 { font-size: 0.95rem !important; font-weight: 700 !important; }
             .compact-card p { display: none; }
             
+            /* 💡 V24: 추가공사 모바일 카드뷰 flex order 유지 💡 */
             .mobile-extra-table thead { display: none; }
             .mobile-extra-table tr { display: flex; flex-wrap: wrap; align-items: center; background: #1e222d; margin-bottom: 15px; border-radius: 10px; padding: 12px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
             .mobile-extra-table td { border: none !important; padding: 2px !important; display: flex; align-items: center; }
             
-            .desc-td { width: 55%; }
-            .cost-td { width: 45%; padding-left: 8px !important; }
-            .date-td { width: 40%; margin-top: 8px; }
-            .check-td-prog { width: 20%; margin-top: 8px; justify-content: center; font-size: 0.75rem; color: #94a3b8; }
-            .check-td-tax { width: 20%; margin-top: 8px; justify-content: center; font-size: 0.75rem; color: #94a3b8; }
-            .del-td { width: 20%; margin-top: 8px; padding-left: 8px !important; }
-            .note-td { width: 100%; margin-top: 10px; display: block !important; }
+            .date-td { width: 40%; order: 3; margin-top: 8px; padding-right: 4px !important; }
+            .desc-td { width: 55%; order: 1; padding-right: 4px !important; }
+            .cost-td { width: 45%; order: 2; padding-left: 4px !important; }
+            .check-td-prog { width: 20%; order: 4; margin-top: 8px; justify-content: center; font-size: 0.75rem; color: #94a3b8; }
+            .check-td-tax { width: 20%; order: 5; margin-top: 8px; justify-content: center; font-size: 0.75rem; color: #94a3b8; }
+            .note-td { width: 100%; order: 7; margin-top: 10px; display: block !important; }
+            .del-td { width: 20%; order: 6; margin-top: 8px; padding-left: 4px !important; }
+            
             .note-header { font-size: 0.8rem; color: #94a3b8; cursor: pointer; display: flex; justify-content: space-between; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px; }
         }
 
@@ -146,8 +147,6 @@
         .gantt-table { margin: 0; white-space: nowrap; font-size: 0.7rem; border-collapse: separate; border-spacing: 0; min-width: max-content; }
         .gantt-table th, .gantt-table td { border: 1px solid rgba(255,255,255,0.05); padding: 5px 0 !important; text-align: center; vertical-align: middle; }
         .gantt-cell, .gantt-date-th { min-width: 25px; max-width: 25px; width: 25px; transition: 0.1s; cursor: pointer; }
-        
-        /* 💡 V22: 공정표 행(공종명) 칸 크기 축소 (90px -> 65px) 💡 */
         .gantt-task-col { position: sticky; left: 0; background: var(--card-bg) !important; z-index: 10; min-width: 65px; max-width: 65px; width: 65px; text-align: left !important; border-right: 2px solid var(--primary-accent) !important; padding: 0 5px !important; }
         
         .gantt-month-row th { background: #181b24; color: #ced4da; font-weight: bold; border-bottom: 2px solid rgba(255,255,255,0.1); }
@@ -217,7 +216,6 @@
         #auth-overlay { position: fixed; inset: 0; background: var(--bg-deep); z-index: 9999; display: flex; align-items: center; justify-content: center; }
         .login-card { background: var(--card-bg); padding: 40px; border-radius: 24px; width: 100%; max-width: 380px; text-align: center; }
         
-        /* V22: 권한 모달 아이템 박스 (라이트모드 대응) */
         .perm-item-box { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); }
         
         ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -417,8 +415,12 @@
                             <table class="table table-dark table-bordered gantt-table" id="ganttTable"></table>
                         </div>
                     </div>
-                    <div class="d-flex justify-content-between mb-5 mt-3">
-                        <button class="btn btn-sm btn-outline-info" onclick="addGanttTaskRow()">+ 공종(행) 추가</button>
+                    <div class="d-flex justify-content-between mb-5 mt-3 flex-wrap gap-2">
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-info" onclick="addGanttTaskRow()">+ 공종(행) 추가</button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="prependGanttDate()"><i class="bi bi-arrow-left"></i> 1일 연장</button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="removeFirstGanttDate()">1일 축소 <i class="bi bi-arrow-right"></i></button>
+                        </div>
                         <div class="d-flex gap-2">
                             <button class="btn btn-sm btn-outline-danger" onclick="removeGanttDate()"><i class="bi bi-arrow-left"></i> 1일 축소</button>
                             <button class="btn btn-sm btn-outline-secondary" onclick="addGanttDate()">1일 연장 <i class="bi bi-arrow-right"></i></button>
@@ -436,7 +438,15 @@
                 <div class="table-responsive">
                     <table class="table table-dark table-sm align-middle text-center mobile-extra-table" style="font-size:0.85rem;">
                         <thead class="text-secondary">
-                            <tr><th>지시일자</th><th style="width: 30%;">내용</th><th>추가 금액(원)</th><th>진행</th><th>계산서</th><th>비고</th><th></th></tr>
+                            <tr>
+                                <th>지시일자</th>
+                                <th style="width: 30%;">내용</th>
+                                <th>추가 금액(원)</th>
+                                <th>진행</th>
+                                <th>계산서</th>
+                                <th>비고</th>
+                                <th></th>
+                            </tr>
                         </thead>
                         <tbody id="extraCostBody"></tbody>
                         <tfoot class="d-none d-md-table-footer-group">
@@ -810,7 +820,6 @@
     let globalEmailToNick = {}; 
     let siteModal, ganttModal, leaveModal, permModalInst;
     
-    // V22: 권한 전역 변수
     let globalNoticeAdmins = [];
     let globalStatusAdmins = [];
     let currentPermType = '';
@@ -888,23 +897,19 @@
         }
     });
 
-    // V22: 권한 및 UI 노출 관리
     function applyRoleRestrictions() {
         let isSuper = (myRole === 'owner' || myRole === 'admin');
         
-        // 담당자 설정 버튼 보이기 (관리자/에디터만)
         document.getElementById('btnNoticePerm').style.display = isSuper ? 'inline-block' : 'none';
         document.getElementById('btnStatusPerm').style.display = isSuper ? 'inline-block' : 'none';
         
-        // 상황판 편집 버튼 보이기 (관리자/에디터 OR 상황판담당자)
         let canEditStatus = isSuper || globalStatusAdmins.includes(myEmail);
         document.getElementById('btnEditStatus').style.display = canEditStatus ? 'inline-block' : 'none';
         
-        // 공정표 삭제 버튼 보이기 (관리자/에디터만)
         document.getElementById('btnDeleteGantt').style.display = isSuper ? 'inline-block' : 'none';
         
         if(globalStatusData.length > 0) renderAllSections(globalStatusData);
-        loadBoardMemos(); // 재랜더링하여 공지 삭제버튼 숨김 처리
+        loadBoardMemos(); 
     }
 
     auth.onAuthStateChanged(async user => {
@@ -921,7 +926,6 @@
                 else myRole = "member";
                 document.getElementById('userRoleDisplay').innerText = myRole === "owner" ? "에디터 (최고권한)" : (myRole === "admin" ? "관리자" : "팀원");
 
-                // V22: 데이터베이스에서 권한 리스트 가져오기
                 globalNoticeAdmins = tData.noticeAdmins || [];
                 globalStatusAdmins = tData.statusAdmins || [];
 
@@ -943,7 +947,6 @@
     async function handleAuth() { const e=document.getElementById('userEmail').value, p=document.getElementById('userPw').value, n=document.getElementById('userNick').value; try { if(isLoginMode) await auth.signInWithEmailAndPassword(e,p); else { await auth.createUserWithEmailAndPassword(e,p); await db.collection("users").doc(e).set({ nickname:n, email:e, createdAt:Date.now()}); } } catch(err){alert(err.message);} }
     async function handleLogout() { if(confirm("로그아웃 하시겠습니까?")) { await auth.signOut(); location.reload(); } }
 
-    // 💡 V22: 모달을 띄우고 담당자 저장하는 로직 추가 💡
     async function openPermModal(type) {
         currentPermType = type;
         document.getElementById('permModalTitle').innerText = type === 'notice' ? '공지사항 담당자 설정' : '종합 상황판 담당자 설정';
@@ -975,12 +978,11 @@
         await db.collection("teams").doc(myTeamId).update(updateData);
         permModalInst.hide();
         alert("담당자 권한이 성공적으로 저장되었습니다.\n(새로고침 시 권한이 반영됩니다.)");
-        location.reload(); // 즉시 권한 반영을 위한 새로고침
+        location.reload(); 
     }
 
     // 게시판
     function loadBoardMemos() {
-        // V22: 공지사항 삭제 권한 체크
         let isSuper = (myRole === 'owner' || myRole === 'admin');
         let canDeleteNotice = isSuper || globalNoticeAdmins.includes(myEmail);
 
@@ -988,7 +990,6 @@
             let notices = ss.docs.map(doc => ({ id: doc.id, text: doc.data().text, dateStr: new Date(doc.data().createdAt).toLocaleDateString().slice(5) }));
             document.getElementById('home-notice-list').innerHTML = notices.slice(0,5).map(n => `<div class="mb-1 text-truncate">• ${n.text}</div>`).join('') || '내용 없음';
             
-            // 삭제 권한이 있는 경우에만 휴지통 아이콘 표시
             document.getElementById('manage-notice-list').innerHTML = notices.map(n => `<div class="board-item d-flex justify-content-between"><span>${n.text} <span class="small text-secondary ms-2">${n.dateStr}</span></span>${canDeleteNotice ? `<button class="btn btn-sm text-danger p-0" onclick="delOldNotice('${n.id}')"><i class="bi bi-trash"></i></button>` : ''}</div>`).join('');
         });
         db.collection("board_memos").where("teamId", "==", myTeamId).where("type", "==", "memo").orderBy("createdAt", "desc").onSnapshot(ss => {
@@ -1091,7 +1092,8 @@
         monthCounts.push({m: currentMonth, c: count});
         let monthHtml = `<tr class="gantt-month-row"><th class="gantt-task-col text-center">월 구분</th>` + monthCounts.map(mc => `<th colspan="${mc.c}" class="text-center">${mc.m + 1}월</th>`).join('') + `</tr>`;
         const thead = ganttDates.map(d => `<th class="gantt-date-th ${d.getDay()===0?'day-sun':(d.getDay()===6?'day-sat':'')}">${d.getDate()}</th>`).join('');
-        let html = `<thead>${monthHtml}<tr><th class="gantt-task-col text-secondary">공종 (클릭 수정)</th>${thead}</tr></thead><tbody>`;
+        // 💡 V24: "공종(클릭 수정)" -> "공종" 텍스트 심플화 💡
+        let html = `<thead>${monthHtml}<tr><th class="gantt-task-col text-secondary">공종</th>${thead}</tr></thead><tbody>`;
         ganttTasks.forEach((task, tIdx) => {
             html += `<tr><td class="gantt-task-col"><input type="text" class="task-editable" value="${task}" onchange="ganttTasks[${tIdx}]=this.value"></td>`;
             ganttDates.forEach((d, dIdx) => { let key = `${tIdx}_${dIdx}`; let bg = d.getDay()===0?'day-sun':(d.getDay()===6?'day-sat':''); html += `<td class="gantt-cell ${bg} ${ganttState[key]?'gantt-active':''}" onclick="toggleGantt('${key}')"></td>`; }); html += `</tr>`;
@@ -1100,8 +1102,49 @@
     }
     function toggleGantt(key) { ganttState[key] = !ganttState[key]; renderGantt(); }
     function addGanttTaskRow() { ganttTasks.push("새 공종"); renderGantt(); }
+    
+    // 뒤쪽(끝) 날짜 연장/축소
     function addGanttDate() { let lastD = new Date(ganttDates[ganttDates.length-1]); lastD.setDate(lastD.getDate() + 1); ganttDates.push(lastD); renderGantt(); }
     function removeGanttDate() { if(ganttDates.length > 1) { ganttDates.pop(); renderGantt(); } } 
+
+    // 💡 V24: 앞쪽(시작일) 날짜 연장 및 데이터 우측 Shift 보존 로직 💡
+    function prependGanttDate() {
+        if(ganttDates.length === 0) return;
+        let firstD = new Date(ganttDates[0]);
+        firstD.setDate(firstD.getDate() - 1);
+        ganttDates.unshift(firstD); // 배열 맨 앞에 어제 날짜 추가
+        
+        let newState = {};
+        // 기존 데이터를 전부 +1 인덱스(우측)로 옮겨서 날짜에 고정시킴
+        for (let tIdx = 0; tIdx < ganttTasks.length; tIdx++) {
+            for (let dIdx = 0; dIdx < ganttDates.length - 1; dIdx++) {
+                if (ganttState[`${tIdx}_${dIdx}`]) {
+                    newState[`${tIdx}_${dIdx + 1}`] = true;
+                }
+            }
+        }
+        ganttState = newState;
+        renderGantt();
+    }
+
+    // 💡 V24: 앞쪽(시작일) 날짜 축소 및 데이터 좌측 Shift 보존 로직 💡
+    function removeFirstGanttDate() {
+        if(ganttDates.length > 1) {
+            ganttDates.shift(); // 배열 맨 앞 날짜 삭제
+            
+            let newState = {};
+            // 기존 데이터를 전부 -1 인덱스(좌측)로 당겨서 날짜에 고정시킴
+            for (let tIdx = 0; tIdx < ganttTasks.length; tIdx++) {
+                for (let dIdx = 1; dIdx <= ganttDates.length; dIdx++) {
+                    if (ganttState[`${tIdx}_${dIdx}`]) {
+                        newState[`${tIdx}_${dIdx - 1}`] = true;
+                    }
+                }
+            }
+            ganttState = newState;
+            renderGantt();
+        }
+    }
 
     function captureGantt() {
         const area = document.getElementById('captureArea'); const wrap = document.getElementById('ganttScrollWrapper'); let sn = document.getElementById('ganttSiteName').value.trim() || '현장';
@@ -1114,22 +1157,23 @@
         }, 200); 
     }
     
+    // 💡 V24: PC 테이블 헤더 순서와 100% 일치하도록 HTML 뼈대 순서 복구 💡
     function addExtraCostRow(data = {}) {
         const tr = document.createElement('tr');
         let id = Date.now() + Math.floor(Math.random()*1000);
         let costVal = data.cost ? Number(data.cost).toLocaleString() : '';
         
         tr.innerHTML = `
+            <td class="date-td"><input type="date" class="form-control form-control-sm input-dark ec-date" value="${data.date||''}"></td>
             <td class="desc-td"><input type="text" class="form-control form-control-sm input-dark ec-desc" placeholder="내용 (예: PC박스 추가)" value="${data.desc||''}"></td>
             <td class="cost-td"><input type="text" class="form-control form-control-sm input-dark text-end ec-cost" oninput="formatComma(this); calcExtraSum()" value="${costVal}" placeholder="금액(원)"></td>
-            <td class="date-td"><input type="date" class="form-control form-control-sm input-dark ec-date" value="${data.date||''}"></td>
             <td class="check-td-prog"><label class="d-md-none me-1">진행</label><input class="form-check-input ec-prog" type="checkbox" ${data.prog?'checked':''}></td>
             <td class="check-td-tax"><label class="d-md-none me-1">계산서</label><input class="form-check-input ec-tax" type="checkbox" ${data.tax?'checked':''}></td>
-            <td class="del-td"><button class="btn btn-sm btn-outline-danger py-0 px-2 w-100" onclick="this.closest('tr').remove(); calcExtraSum();"><i class="bi bi-x"></i> <span class="d-md-none">삭제</span></button></td>
             <td class="note-td">
                 <div class="d-md-none note-header" data-bs-toggle="collapse" data-bs-target="#note-${id}">비고 (메모) <i class="bi bi-chevron-down"></i></div>
                 <div class="collapse d-md-block" id="note-${id}"><input type="text" class="form-control form-control-sm input-dark ec-note mt-2 mt-md-0" placeholder="메모를 입력하세요" value="${data.note||''}"></div>
             </td>
+            <td class="del-td"><button class="btn btn-sm btn-outline-danger py-0 px-2 w-100" onclick="this.closest('tr').remove(); calcExtraSum();"><i class="bi bi-x"></i> <span class="d-md-none">삭제</span></button></td>
         `;
         document.getElementById('extraCostBody').appendChild(tr); calcExtraSum();
     }
