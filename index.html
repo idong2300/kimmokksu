@@ -45,14 +45,18 @@
         .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1040; backdrop-filter: blur(2px); transition: 0.3s; opacity: 0; }
         .sidebar-overlay.active { display: block; opacity: 1; }
         
-        /* 💡 V20: 화이트(데이) 모드 전용 CSS 오버라이드 💡 */
+        /* 💡 V21: 화이트(데이) 모드 전용 CSS 전면 개편 💡 */
         body.light-mode { background-color: #f4f6f8; color: #212529; }
+        body.light-mode .main-container, body.light-mode #auth-overlay { background-color: #f4f6f8; } /* 배경 연한 회색 */
         body.light-mode .sidebar { background-color: #ffffff; border-right: 1px solid #dee2e6; }
         body.light-mode .sidebar-overlay { background: rgba(255,255,255,0.8); }
-        body.light-mode .t5-card, body.light-mode .modal-content, body.light-mode .mobile-site-card, body.light-mode .login-card, body.light-mode .cal-accordion-content, body.light-mode .monthly-list-box { background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #dee2e6 !important; }
+        
+        /* V21: 펀치리스트(summary-card), 히스토리(history-card) 포함 하얀색 카드 처리 */
+        body.light-mode .t5-card, body.light-mode .modal-content, body.light-mode .mobile-site-card, body.light-mode .login-card, body.light-mode .cal-accordion-content, body.light-mode .monthly-list-box, body.light-mode .summary-card, body.light-mode .history-card { background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #dee2e6 !important; }
+        
         body.light-mode .input-dark { background-color: #f8f9fa !important; border: 1px solid #ced4da !important; color: #212529 !important; }
         body.light-mode .input-dark::placeholder { color: #adb5bd !important; }
-        body.light-mode .text-white { color: #212529 !important; }
+        body.light-mode .text-white { color: #212529 !important; } /* 글씨 흑전환 */
         body.light-mode .nav-link { color: #495057; }
         body.light-mode .nav-link:hover, body.light-mode .nav-link.active { background-color: #eef2ff; color: var(--primary-accent); }
         body.light-mode .table-dark { --bs-table-bg: #ffffff; --bs-table-color: #212529; --bs-table-border-color: #dee2e6; }
@@ -83,6 +87,14 @@
         body.light-mode .mobile-grid-2, body.light-mode .mobile-grid-3 { background: #f8f9fa; border: 1px solid #dee2e6; }
         body.light-mode .mobile-grid-val { color: #212529; }
         body.light-mode .mobile-card-subtitle { border-bottom: 1px solid #dee2e6; }
+        
+        /* V21: 로고 자동 흑백 전환, 프로그래스 바, 버튼 색상 교정 */
+        body.light-mode img[src*="logo"] { filter: invert(1) grayscale(100%) contrast(200%); }
+        body.light-mode .progress-container { background-color: #e9ecef; }
+        body.light-mode .t5-btn-small.bg-secondary { background-color: #6c757d !important; color: #ffffff !important; }
+        body.light-mode .t5-btn-small.bg-primary { background-color: #0d6efd !important; color: #ffffff !important; }
+        body.light-mode .t5-btn-small.bg-success { background-color: #198754 !important; color: #ffffff !important; }
+        body.light-mode .t5-btn-small.bg-danger { background-color: #dc3545 !important; color: #ffffff !important; }
 
         @media (max-width: 768px) {
             .sidebar { position: fixed; left: 0; top: 0; transform: translateX(-100%); } 
@@ -790,7 +802,6 @@
         document.getElementById('calYear').innerHTML = yrHtml;
         document.getElementById('calMonth').innerHTML = moHtml;
         
-        // V20: 테마 초기화
         let savedTheme = localStorage.getItem('kimmoksu_theme');
         if(savedTheme === 'light') {
             document.body.classList.add('light-mode');
@@ -800,7 +811,6 @@
         }
     });
     
-    // V20: 화이트/블랙 토글 함수
     function toggleTheme() {
         let isLight = document.body.classList.toggle('light-mode');
         localStorage.setItem('kimmoksu_theme', isLight ? 'light' : 'dark');
@@ -917,7 +927,7 @@
     async function delOldNotice(id) { if(confirm("삭제하시겠습니까?")) await db.collection("notices").doc(id).delete(); }
     async function delBoardItem(id) { if(confirm("삭제하시겠습니까?")) await db.collection("board_memos").doc(id).delete(); }
 
-    // 상황판 (V20: 버튼 넓이 100px 확장 및 오버플로우 방지)
+    // 상황판
     let siteEditingId = null;
     let globalStatusData = [];
     let isStatusEditMode = false;
@@ -946,7 +956,6 @@
         document.getElementById('all-status-containers').innerHTML = sections.map(sec => {
             const items = data.filter(d => d.status === sec.key);
             
-            // V20: ... (ellipsis) 무시를 위해 style="overflow:visible;" 적용 및 [삭제] 텍스트 명확화
             let tableRows = items.length === 0 ? `<tr><td colspan="10" class="text-secondary py-4">등록된 데이터가 없습니다.</td></tr>` : items.map(item => `<tr><td class="fw-bold" style="color:var(--primary-accent);">${item.siteName}</td><td>${item.date1 || '-'}</td>${sec.key !== 'pre-design' ? `<td>${item.date2 || '-'}</td>` : ''}${sec.key === 'ongoing' ? `<td>${item.site_manager || '-'}</td><td>${item.designer || '-'}</td><td>${item.designer_sign || '-'}</td>` : ''}${sec.key === 'scheduled' ? `<td>${item.site_manager || '-'}</td>` : ''}${sec.key === 'designing' ? `<td>${item.designer || '-'}</td>` : ''}<td class="text-secondary text-start ps-3">${item.etc || '-'}</td><td class="text-nowrap" style="overflow:visible; text-overflow:clip; padding:0 5px;"><button class="btn btn-sm btn-outline-primary py-0 px-2 me-1" onclick="openSiteEditModal('${item.id}')"><i class="bi bi-pencil-square"></i></button>${isStatusEditMode ? `<button class="btn btn-sm btn-danger py-0 px-2" onclick="deleteSite('${item.id}')">삭제</button>` : ''}</td></tr>`).join('');
             
             let cards = items.length === 0 ? `<p class="text-center text-secondary py-3 small" style="background:#1e222d; border-radius:12px;">등록된 데이터가 없습니다.</p>` : items.map(item => {
