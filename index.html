@@ -6,7 +6,7 @@
     
     <meta property="og:type" content="website">
     <meta property="og:title" content="김목수이야기 - 통합 ERP 시스템">
-    <meta property="og:description" content="현장 관리, 공정표, 작업일보, 연차 관리 통합 시스템">
+    <meta property="og:description" content="현장 관리, 공정표, 작업일보, 연차 관리 시스템">
     <meta property="og:image" content="https://idong2300.github.io/kimmoksu/og-image.png">
     <meta property="og:locale" content="ko_KR">
 
@@ -15,7 +15,7 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1e222d">
 
-    <title>김목수이야기 - 통합 ERP 시스템</title>
+    <title>김목수이야기 - 메인 지휘소</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -24,6 +24,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
     <script src="firebase-config.js"></script>
 
     <style>
@@ -49,6 +50,12 @@
         body.light-mode .sidebar { background-color: #ffffff; border-right: 1px solid #dee2e6; }
         body.light-mode .sidebar-overlay { background: rgba(255,255,255,0.8); }
         body.light-mode .t5-card, body.light-mode .modal-content, body.light-mode .modal-box, body.light-mode .mobile-site-card, body.light-mode .login-card, body.light-mode .cal-accordion-content, body.light-mode .monthly-list-box, body.light-mode .summary-card, body.light-mode .history-card { background-color: #ffffff !important; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #dee2e6 !important; }
+        
+        /* T5 결과창 화이트 모드 복구 */
+        body.light-mode #t5-temp-result { background-color: #ffffff !important; border: 1px solid #dee2e6 !important; }
+        body.light-mode #res-site-display { color: #212529 !important; }
+        body.light-mode .res-gap { color: #d97706 !important; } 
+        
         body.light-mode .input-dark, body.light-mode .modal-box textarea, body.light-mode .modal-box input, body.light-mode .modal-box select { background-color: #f8f9fa !important; border: 1px solid #ced4da !important; color: #212529 !important; }
         body.light-mode .input-dark::placeholder { color: #adb5bd !important; }
         body.light-mode .text-white, body.light-mode .modal-box h5, body.light-mode .modal-content h5 { color: #212529 !important; }
@@ -61,7 +68,6 @@
         body.light-mode .board-item, body.light-mode .check-item, body.light-mode .leave-detail-item { background: #f8f9fa; border-color: #dee2e6; }
         body.light-mode .gantt-task-col { background: #f8f9fa !important; }
         body.light-mode .gantt-month-row th { background: #e9ecef; color: #212529; border-bottom: 2px solid #ced4da; }
-        body.light-mode .gantt-cell:hover { background-color: rgba(0,0,0,0.05); }
         body.light-mode .mobile-extra-table tr { background: #ffffff; border-color: #dee2e6; }
         body.light-mode .mobile-extra-table td::before { color: #6c757d; }
         body.light-mode .excel-table { background: #ffffff; border-color: #adb5bd; }
@@ -90,6 +96,10 @@
         body.light-mode .t5-btn-small.bg-danger { background-color: #dc3545 !important; color: #ffffff !important; }
         body.light-mode .perm-item-box { background: #f8f9fa !important; border-color: #dee2e6 !important; color: #212529 !important; }
 
+        @media (min-width: 769px) {
+            .pc-tfoot { display: table-footer-group !important; }
+        }
+
         @media (max-width: 768px) {
             .sidebar { position: fixed; left: 0; top: 0; transform: translateX(-100%); } 
             .sidebar.active { transform: translateX(0); } 
@@ -114,6 +124,7 @@
             .del-td { width: 20%; order: 6; margin-top: 8px; padding-left: 4px !important; }
             
             .note-header { font-size: 0.8rem; color: #94a3b8; cursor: pointer; display: flex; justify-content: space-between; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px; }
+            .pc-tfoot { display: none !important; }
         }
 
         .mobile-menu-btn { display: none; position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px; border-radius: 50%; background-color: var(--primary-accent); color: white; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 1030; border: none; font-size: 1.8rem; cursor: pointer; }
@@ -142,13 +153,21 @@
         .mobile-grid-val { font-size: 0.85rem; color: #f8fafc; font-weight: bold; }
 
         .gantt-container { overflow-x: auto; overflow-y: hidden; background: transparent; max-width: 100%; padding-bottom: 10px; }
-        .gantt-table { margin: 0; white-space: nowrap; font-size: 0.7rem; border-collapse: separate; border-spacing: 0; min-width: max-content; }
-        .gantt-table th, .gantt-table td { border: 1px solid rgba(255,255,255,0.05); padding: 5px 0 !important; text-align: center; vertical-align: middle; }
-        .gantt-cell, .gantt-date-th { min-width: 25px; max-width: 25px; width: 25px; transition: 0.1s; cursor: pointer; }
-        .gantt-task-col { position: sticky; left: 0; background: var(--card-bg) !important; z-index: 10; min-width: 65px; max-width: 65px; width: 65px; text-align: left !important; border-right: 2px solid var(--primary-accent) !important; padding: 0 5px !important; }
         
+        /* 공정표 십자선 (Crosshair) 하이라이트 CSS */
+        .gantt-table { margin: 0; white-space: nowrap; font-size: 0.7rem; border-collapse: separate; border-spacing: 0; min-width: max-content; position: relative; z-index: 1; }
+        .gantt-table th, .gantt-table td { border: 1px solid rgba(255,255,255,0.05); padding: 5px 0 !important; text-align: center; vertical-align: middle; }
+        .gantt-cell, .gantt-date-th { min-width: 25px; max-width: 25px; width: 25px; transition: 0.1s; cursor: pointer; position: relative; }
+        
+        .gantt-cell::after { content: ''; position: absolute; left: 0; top: -5000px; height: 10000px; width: 100%; background: transparent; z-index: 1; pointer-events: none; transition: 0.1s; }
+        .gantt-cell:hover::after { background: rgba(255,255,255,0.05); }
+        .gantt-table tbody tr:hover td { background: rgba(255,255,255,0.05); }
+        
+        body.light-mode .gantt-cell:hover::after { background: rgba(0,0,0,0.05); }
+        body.light-mode .gantt-table tbody tr:hover td { background: rgba(0,0,0,0.05); }
+        
+        .gantt-task-col { position: sticky; left: 0; background: var(--card-bg) !important; z-index: 10; min-width: 65px; max-width: 65px; width: 65px; text-align: left !important; border-right: 2px solid var(--primary-accent) !important; padding: 0 5px !important; }
         .gantt-month-row th { background: #181b24; color: #ced4da; font-weight: bold; border-bottom: 2px solid rgba(255,255,255,0.1); }
-        .gantt-cell:hover { background-color: rgba(255,255,255,0.1); }
         .day-sat { background-color: rgba(92, 124, 250, 0.08) !important; color: #5c7cfa !important; }
         .day-sun { background-color: rgba(224, 49, 49, 0.08) !important; color: #e03131 !important; }
         .gantt-active { background-color: var(--primary-accent) !important; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.2); }
@@ -450,13 +469,12 @@
                     <div class="d-flex d-md-none flex-column gap-2 mb-4 mt-3">
                         <button class="btn btn-sm btn-outline-info w-100 py-2 fw-bold" onclick="addGanttTaskRow()">+ 공종(행) 추가</button>
                         <div class="d-flex gap-1 justify-content-between">
-                            <button class="btn btn-outline-secondary p-1 flex-fill" style="font-size:0.75rem;" onclick="prependGanttDate()"><i class="bi bi-arrow-left"></i> 앞연장</button>
                             <button class="btn btn-outline-danger p-1 flex-fill" style="font-size:0.75rem;" onclick="removeFirstGanttDate()">앞축소 <i class="bi bi-arrow-right"></i></button>
+                            <button class="btn btn-outline-secondary p-1 flex-fill" style="font-size:0.75rem;" onclick="prependGanttDate()"><i class="bi bi-arrow-left"></i> 앞연장</button>
                             <button class="btn btn-outline-danger p-1 flex-fill" style="font-size:0.75rem;" onclick="removeGanttDate()"><i class="bi bi-arrow-left"></i> 뒤축소</button>
                             <button class="btn btn-outline-secondary p-1 flex-fill" style="font-size:0.75rem;" onclick="addGanttDate()">뒤연장 <i class="bi bi-arrow-right"></i></button>
                         </div>
                     </div>
-
                 </div>
 
                 <hr class="border-secondary opacity-25 mt-2">
@@ -472,7 +490,7 @@
                             <tr>
                                 <th>지시일자</th>
                                 <th style="width: 30%;">내용</th>
-                                <th>추가 금액(원)</th>
+                                <th>추가금액 (VAT별도)</th>
                                 <th>진행</th>
                                 <th>계산서</th>
                                 <th>비고</th>
@@ -480,7 +498,7 @@
                             </tr>
                         </thead>
                         <tbody id="extraCostBody"></tbody>
-                        <tfoot class="d-none d-md-table-footer-group">
+                        <tfoot class="pc-tfoot">
                             <tr>
                                 <td colspan="2" class="text-end fw-bold text-secondary py-3">총 추가 공사대금 :</td>
                                 <td class="text-warning fw-bold fs-5 py-3 extraTotalSumText">0</td>
@@ -605,7 +623,7 @@
         <section id="page-memo" class="page-section">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h3 class="fw-bold m-0">전체 & 개인 메모장</h3>
-                <button class="btn btn-primary fw-bold" onclick="addMemo()">+ 새 메모 작성</button>
+                <button class="btn btn-primary fw-bold" onclick="document.getElementById('memoCreateModal').style.display='flex'">+ 새 메모 작성</button>
             </div>
             <ul class="nav nav-pills mb-4 border-bottom border-secondary border-opacity-25 pb-2" id="memoTabs">
                 <li class="nav-item"><button class="nav-link active py-1 px-3" onclick="switchMemoTab('private')">내 메모</button></li>
@@ -728,6 +746,26 @@
     <button class="mobile-menu-btn" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
 </div>
 
+<div id="memoCreateModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:2000; align-items:center; justify-content:center; backdrop-filter:blur(2px);">
+    <div class="modal-box" style="background:var(--card-bg); padding:25px; border-radius:20px; width:90%; max-width:400px; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+        <h5 class="fw-bold mb-4 text-white">새 메모 작성</h5>
+        <div class="mb-3">
+            <input type="text" id="memoTitleInput" class="form-control input-dark" placeholder="제목 (선택사항)">
+        </div>
+        <div class="mb-3">
+            <textarea id="memoTextInput" class="form-control input-dark" rows="5" placeholder="메모 내용을 입력하세요"></textarea>
+        </div>
+        <div class="d-flex align-items-center mb-4">
+            <input class="custom-check me-2" type="checkbox" id="memoSharedCheck">
+            <label class="text-white small fw-bold cursor-pointer" for="memoSharedCheck">☑ 팀 전체 공유 (공용)</label>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-secondary w-50 fw-bold" onclick="document.getElementById('memoCreateModal').style.display='none'">취소</button>
+            <button class="btn btn-primary w-50 fw-bold" onclick="saveNewMemo()">작성 완료</button>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="siteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg" style="background: var(--card-bg); border-radius: 20px;">
@@ -816,9 +854,9 @@
     </div>
 </div>
 
-<div id="addTaskModal">
-    <div class="modal-box">
-        <h5 class="fw-bold mb-3">새로운 마감 항목</h5>
+<div id="addTaskModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:2000; align-items:center; justify-content:center; backdrop-filter:blur(2px);">
+    <div class="modal-box" style="background:var(--card-bg); padding:25px; border-radius:20px; width:90%; max-width:400px; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+        <h5 class="fw-bold mb-3 text-white">새로운 마감 항목</h5>
         <textarea id="newTaskInput" class="form-control input-dark py-3 mb-4 auto-resize-textarea" rows="1" oninput="this.style.height='';this.style.height=this.scrollHeight+'px'"></textarea>
         <div class="d-flex gap-2">
             <button class="btn btn-secondary py-2 w-50 fw-bold" onclick="closePunchAddModal()">취소</button>
@@ -907,7 +945,6 @@
     }
     function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); document.getElementById('sidebarOverlay').classList.toggle('active'); }
     
-    // 💡 V27: 외부 링크(해시)를 통한 라우팅 완벽 호환 💡
     window.onload = () => { 
         let hash = window.location.hash.replace('#', '');
         if(hash && document.getElementById('page-' + hash)) {
@@ -971,7 +1008,6 @@
 
     function toggleAuthMode() { isLoginMode = !isLoginMode; document.getElementById('auth-title').innerText = isLoginMode ? "접속" : "가입"; document.getElementById('userNick').style.display = isLoginMode ? "none" : "block"; }
     
-    // 💡 V27: 자동 로그인 유지 적용 💡
     async function handleAuth() { 
         const e=document.getElementById('userEmail').value, p=document.getElementById('userPw').value, n=document.getElementById('userNick').value; 
         const keepAlive = document.getElementById('autoLoginCheck') ? document.getElementById('autoLoginCheck').checked : true;
@@ -1009,7 +1045,6 @@
         location.reload(); 
     }
 
-    // 게시판
     function loadBoardMemos() {
         let isSuper = (myRole === 'owner' || myRole === 'admin');
         let canDeleteNotice = isSuper || globalNoticeAdmins.includes(myEmail);
@@ -1034,7 +1069,6 @@
     async function delOldNotice(id) { if(confirm("삭제하시겠습니까?")) await db.collection("notices").doc(id).delete(); }
     async function delBoardItem(id) { if(confirm("삭제하시겠습니까?")) await db.collection("board_memos").doc(id).delete(); }
 
-    // 상황판
     let siteEditingId = null;
     let globalStatusData = [];
     let isStatusEditMode = false;
@@ -1097,7 +1131,6 @@
     async function saveSiteData() { const data = { teamId: myTeamId, status: document.getElementById('f_status').value, siteName: document.getElementById('f_siteName').value.trim(), date1: document.getElementById('f_date1').value, date2: document.getElementById('f_date2').value, site_manager: document.getElementById('f_site_manager').value, designer: document.getElementById('f_designer').value, designer_sign: document.getElementById('f_designer_sign').value, etc: document.getElementById('f_etc').value, updatedAt: Date.now() }; if(!data.siteName) return alert("현장명을 입력해주세요."); if(siteEditingId) await db.collection("site_status").doc(siteEditingId).update(data); else await db.collection("site_status").add({ ...data, createdAt: Date.now() }); siteModal.hide(); }
     async function deleteSite(id) { if(confirm("이 현장을 삭제하시겠습니까?")) await db.collection("site_status").doc(id).delete(); }
 
-    // 공정표 (Gantt)
     let ganttTasks = ["철거", "목공", "전기", "필름", "도장", "소방", "가구", "바닥", "유리", "금속", "사인", "설비", "청소", "기타 잔손"];
     let ganttDates = []; let ganttState = {}; let currentGanttId = null;
     
@@ -1160,7 +1193,6 @@
         }, 200); 
     }
     
-    // 💡 V27: 삭제 버튼 [X] 축소 및 모바일 정렬 복구 💡
     function addExtraCostRow(data = {}) {
         const tr = document.createElement('tr');
         let id = Date.now() + Math.floor(Math.random()*1000);
@@ -1216,8 +1248,15 @@
     async function loadGanttDoc(id) { const d = (await db.collection("gantt_logs").doc(id).get()).data(); currentGanttId = id; document.getElementById('ganttSiteName').value = d.site; ganttTasks = d.tasks; ganttState = d.state; ganttDates = d.dates.map(str => new Date(str)); document.getElementById('extraCostBody').innerHTML = ''; d.extra.forEach(ex => addExtraCostRow(ex)); document.getElementById('ganttDashboard').style.display = 'block'; renderGantt(); calcExtraSum(); window.scrollTo(0,0); }
     async function deleteGantt() { if(confirm("이 공정표를 삭제하시겠습니까?")) { if(currentGanttId) await db.collection("gantt_logs").doc(currentGanttId).delete(); document.getElementById('ganttDashboard').style.display = 'none'; currentGanttId=null; } }
 
-    // 작업일보
-    let editingId = null; let teamData = [{ teamName: "목공팀", workers: [] }];
+    // 💡 V28: 작업일보 4대 공정 초기화 💡
+    let editingId = null; 
+    let teamData = [
+        { teamName: "목수", workers: [] },
+        { teamName: "도장", workers: [] },
+        { teamName: "필름", workers: [] },
+        { teamName: "전기", workers: [] }
+    ];
+    
     function renderAllTeams() {
         const container = document.getElementById('team-container'); const [year, month] = (document.getElementById('logMonth').value||"2026-04").split('-').map(Number); const lastDay = new Date(year, month, 0).getDate();
         container.innerHTML = teamData.map((team, tIdx) => {
@@ -1263,7 +1302,6 @@
         const ws = XLSX.utils.aoa_to_sheet(wsData); XLSX.utils.book_append_sheet(wb, ws, "근무현황"); XLSX.writeFile(wb, `${d_raw.site}_${monthNum}월.xlsx`); 
     }
 
-    // 펀치리스트
     let currentSite = ""; let punchListListener = null; let punchDetailListener = null; let globalPunchSites = []; let activePunchCardFilter = "전체"; let globalPunchItems = []; let activePunchFilter = "전체";
     function loadPunchSummaryCards() { if(!myTeamId) return; if(punchListListener) punchListListener(); punchListListener = db.collection("punch_lists").where("teamId", "==", myTeamId).onSnapshot(ss => { let sitesData = {}; ss.docs.forEach(doc => { const d = doc.data(); if(!sitesData[d.siteName]) sitesData[d.siteName] = { total: 0, done: 0, lastAt: 0, writer: d.writer }; sitesData[d.siteName].total++; if(d.done) sitesData[d.siteName].done++; if(d.createdAt > sitesData[d.siteName].lastAt) { sitesData[d.siteName].lastAt = d.createdAt; sitesData[d.siteName].writer = d.writer; } }); globalPunchSites = Object.keys(sitesData).map(key => ({ name: key, ...sitesData[key] })).sort((a, b) => b.lastAt - a.lastAt); renderPunchCardFilterAndList(); }); }
     function renderPunchCardFilterAndList() { document.getElementById('punch-card-filter').innerHTML = ["전체", ...new Set(globalPunchSites.map(s => s.writer).filter(Boolean))].map(w => `<button class="btn btn-sm ${w === activePunchCardFilter ? 'btn-primary' : 'btn-outline-secondary text-secondary'} rounded-pill px-3" onclick="activePunchCardFilter='${w}'; renderPunchCardFilterAndList();">${w}</button>`).join(''); const filteredSites = activePunchCardFilter === "전체" ? globalPunchSites : globalPunchSites.filter(s => s.writer === activePunchCardFilter); 
@@ -1297,7 +1335,6 @@
     function closePunchAddModal() { document.getElementById('addTaskModal').style.display = 'none'; }
     async function saveNewPunchTask() { const t = document.getElementById('newTaskInput').value.trim(); if(!t) return; await db.collection("punch_lists").add({ teamId: myTeamId, siteName: currentSite, text: t, done: false, writer: userNickname, createdAt: Date.now() }); closePunchAddModal(); }
 
-    // T5 계산기
     function toggleT5Specs() { const el = document.getElementById('t5-spec-container'); el.style.display = el.style.display === 'none' ? 'block' : 'none'; }
     function addNewSpec() { let n=prompt("규격"), a=prompt("치수"); if(n&&a) document.getElementById('t5-spec-list').insertAdjacentHTML('beforeend', `<div class="col-4 col-md-auto spec-item"><label class="small">${n}용</label><input type="number" class="form-control input-dark spec-actual" data-nominal="${n}" value="${a}"></div>`); }
     function addT5Row() { document.getElementById('t5-input-container').insertAdjacentHTML('beforeend', `<div class="row g-2 mb-2 t5-row-item"><div class="col-6"><input type="text" class="form-control input-dark t5-section-name" placeholder="구간 (예: 거실)"></div><div class="col-6"><input type="number" class="form-control input-dark t5-length-val" placeholder="길이 (mm)"></div></div>`); }
@@ -1317,7 +1354,7 @@
     function copyT5Order(site, text) { const fmt = site + '\n' + text.split(' / ').join('\n'); const t = document.createElement("textarea"); document.body.appendChild(t); t.value = fmt; t.select(); document.execCommand('copy'); document.body.removeChild(t); alert("복사 완료!\n\n" + fmt); }
     async function deleteT5Log(id) { if(confirm("삭제하시겠습니까?")) await db.collection("t5_logs").doc(id).delete(); }
 
-    // 메모장
+    // 💡 V28: 세련된 메모 전용 팝업 로직 💡
     let currentMemoTab = 'private';
     function loadMemos() {
         db.collection("team_memos").where("teamId", "==", myTeamId).onSnapshot(ss => {
@@ -1327,10 +1364,25 @@
         });
     }
     function switchMemoTab(tab) { currentMemoTab = tab; document.querySelectorAll('#memoTabs .nav-link').forEach(l => l.classList.remove('active')); event.target.classList.add('active'); loadMemos(); }
-    async function addMemo() { let t = prompt("메모 내용 (앞에 [공용] 이라고 적으면 전체 공유 보드에 저장됩니다)"); if(!t) return; let type = t.startsWith("[공용]") ? 'shared' : 'private'; let dStr = new Date().toISOString().split('T')[0]; await db.collection("team_memos").add({ teamId: myTeamId, type, text: t, writer: myEmail, dateStr: dStr, createdAt: Date.now() }); switchMemoTab(type); }
+    
+    async function saveNewMemo() {
+        let title = document.getElementById('memoTitleInput').value.trim();
+        let text = document.getElementById('memoTextInput').value.trim();
+        let isShared = document.getElementById('memoSharedCheck').checked;
+        if(!text) return alert("내용을 입력하세요.");
+        
+        let fullText = title ? `[${title}]\n${text}` : text;
+        let type = isShared ? 'shared' : 'private';
+        let dStr = new Date().toISOString().split('T')[0];
+        
+        await db.collection("team_memos").add({ teamId: myTeamId, type, text: fullText, writer: myEmail, dateStr: dStr, createdAt: Date.now() });
+        switchMemoTab(type);
+        document.getElementById('memoCreateModal').style.display = 'none';
+        document.getElementById('memoTitleInput').value = '';
+        document.getElementById('memoTextInput').value = '';
+    }
     async function delMemo(id) { if(confirm("삭제하시겠습니까?")) await db.collection("team_memos").doc(id).delete(); }
 
-    // 연차 관리
     let teamMembersInfo = {}; let globalLeaveRecords = [];
     function loadLeaveData(teamData) {
         teamMembersInfo = teamData.membersInfo || {};
@@ -1497,7 +1549,6 @@
         await db.collection("teams").doc(myTeamId).update({ membersInfo: newInfo }); alert("설정 저장 완료");
     }
 
-    // 팀 & 설정 로직
     function checkTeamUI() {
         if(myTeamId) { document.getElementById('no-team-section').style.display = 'none'; document.getElementById('has-team-section').style.display = 'block'; loadTeamMembers(); } 
         else { document.getElementById('no-team-section').style.display = 'block'; document.getElementById('has-team-section').style.display = 'none'; }
@@ -1527,12 +1578,10 @@
     async function kickMember(tEmail) { if(confirm("팀에서 내보내시겠습니까?")) { const tDoc = await db.collection("teams").doc(myTeamId).get(); let m = tDoc.data().members.filter(x => x !== tEmail); let a = (tDoc.data().admins || []).filter(x => x !== tEmail); await db.collection("teams").doc(myTeamId).update({ members: m, admins: a }); loadTeamMembers(); alert("팀원이 삭제되었습니다."); } }
     async function toggleAdmin(tEmail, isPro) { const tDoc = await db.collection("teams").doc(myTeamId).get(); let a = tDoc.data().admins || []; if(isPro) { if(!a.includes(tEmail)) a.push(tEmail); } else { a = a.filter(x => x !== tEmail); } await db.collection("teams").doc(myTeamId).update({ admins: a }); loadTeamMembers(); }
 
-    // 내 정보 수정
     async function updateProfile() { await db.collection("users").doc(myEmail).update({ nickname: document.getElementById('editNickname').value }); location.reload(); }
     function copyText(t) { navigator.clipboard.writeText(t); alert("복사됨"); }
     async function changePassword() { try { await auth.currentUser.updatePassword(document.getElementById('newPasswordInput').value); alert("성공"); } catch(e){ alert(e.message); } }
 
-    // 작업일보 초기화
     document.getElementById('logMonth').onchange = renderAllTeams; 
     document.getElementById('logMonth').value = new Date().toISOString().substring(0, 7);
 </script>
