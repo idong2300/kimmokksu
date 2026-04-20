@@ -10,7 +10,7 @@
     <meta property="og:image" content="https://idong2300.github.io/kimmoksu/og-image.png">
     <meta property="og:locale" content="ko_KR">
 
-    <title>김목수이야기 - 마스터 스케줄러 (V28)</title>
+    <title>김목수이야기 - 마스터 스케줄러 (V29)</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -64,7 +64,8 @@
         .custom-check:checked::after { content: '✔'; position: absolute; color: white; font-size: 12px; top: 50%; left: 50%; transform: translate(-50%, -50%); }
 
         .modal-box { background: var(--card-bg); padding: 25px; border-radius: 20px; width: 90%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        
+        .modal-backdrop-custom { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+
         body.light-mode { background-color: #f4f6f8; color: #212529; }
         body.light-mode .main-container { background-color: #f4f6f8; }
         body.light-mode .sidebar { background-color: #ffffff; border-right: 1px solid #dee2e6; }
@@ -102,8 +103,18 @@
 <div id="auth-overlay" style="display: none; position: fixed; inset: 0; background: var(--bg-deep); z-index: 9999; align-items: center; justify-content: center;">
     <div class="t5-card text-center" style="width: 100%; max-width: 380px;">
         <h3 class="mb-4 fw-bold">스케줄러 접속</h3>
-        <p class="text-secondary small">접근 권한이 없습니다. 메인 화면에서 로그인해주세요.</p>
-        <button class="btn btn-primary w-100 py-2 fw-bold" onclick="location.href='index.html'">메인 화면으로 이동</button>
+        <input type="email" id="userEmail" class="form-control input-dark mb-3" placeholder="이메일">
+        <input type="password" id="userPw" class="form-control input-dark mb-3" placeholder="비밀번호">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4 ms-1">
+            <div class="form-check text-start m-0">
+                <input class="form-check-input" type="checkbox" id="autoLoginCheck" checked>
+                <label class="form-check-label small text-secondary" for="autoLoginCheck">자동 로그인</label>
+            </div>
+            <span class="small text-info cursor-pointer" onclick="resetPassword()">비밀번호 찾기</span>
+        </div>
+
+        <button class="btn btn-primary w-100 py-2 fw-bold" onclick="handleAuth()">접속하기</button>
     </div>
 </div>
 
@@ -187,7 +198,7 @@
     </main>
 </div>
 
-<div id="eventModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:2000; align-items:center; justify-content:center; backdrop-filter:blur(2px);">
+<div class="modal-backdrop-custom" id="eventModal">
     <div class="modal-box">
         <h5 class="fw-bold mb-4 text-white">새 일정 추가</h5>
         <div class="row g-3">
@@ -220,7 +231,7 @@
     </div>
 </div>
 
-<div id="colorModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:2000; align-items:center; justify-content:center; backdrop-filter:blur(2px);">
+<div class="modal-backdrop-custom" id="colorModal">
     <div class="modal-box">
         <h5 class="fw-bold mb-4 text-white">달력 태그 색상 편집</h5>
         <p class="small text-secondary mb-3">설정한 색상은 팀원 모두에게 적용됩니다.</p>
@@ -295,6 +306,27 @@
         const btn = document.getElementById('themeToggleBtn');
         if(isLight) { btn.innerHTML = '<i class="bi bi-moon-fill"></i> <span>블랙 모드로 전환</span>'; btn.classList.replace('btn-outline-secondary', 'btn-outline-dark'); } 
         else { btn.innerHTML = '<i class="bi bi-brightness-high-fill"></i> <span>화이트 모드로 전환</span>'; btn.classList.replace('btn-outline-dark', 'btn-outline-secondary'); }
+    }
+
+    async function handleAuth() { 
+        const e=document.getElementById('userEmail').value, p=document.getElementById('userPw').value; 
+        const keepAlive = document.getElementById('autoLoginCheck') ? document.getElementById('autoLoginCheck').checked : true;
+        try { 
+            await auth.setPersistence(keepAlive ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION);
+            await auth.signInWithEmailAndPassword(e,p); 
+        } catch(err){alert(err.message);} 
+    }
+    
+    // 💡 V29: 비밀번호 찾기 (초기화) 로직 💡
+    async function resetPassword() {
+        const e = document.getElementById('userEmail').value.trim();
+        if(!e) return alert("비밀번호를 찾을 이메일을 먼저 입력해주세요.");
+        try {
+            await auth.sendPasswordResetEmail(e);
+            alert("입력하신 이메일로 비밀번호 재설정 링크를 발송했습니다. 이메일함을 확인해주세요!");
+        } catch(err) {
+            alert("이메일 발송 실패: " + err.message);
+        }
     }
 
     function parseDateObj(str) {
@@ -411,8 +443,9 @@
                 let bgStyle = `background-color: ${bgColor};`;
                 let titleText = (isStart || isSingle) ? ev.title : '&nbsp;'; 
                 
+                // 💡 V29: 오전/오후반차 텍스트를 무조건 [반차]로 통합 (그래픽은 유지) 💡
                 if(ev.type === 'leave') {
-                    let prefix = ev.leaveType === 'full' ? '[연차]' : (ev.leaveType === 'am' ? '[오전반차]' : '[오후반차]');
+                    let prefix = ev.leaveType === 'full' ? '[연차]' : '[반차]';
                     titleText = `${prefix} ${ev.title}`;
                     
                     if(ev.leaveType === 'am') {
@@ -460,8 +493,9 @@
             let colorHex = themeColors[ev.type];
             let dateTxt = ev.end ? `${ev.start} ~ ${ev.end}` : ev.start;
             
+            // 💡 V29: 하단 리스트도 [반차]로 텍스트 통합 💡
             let extTxt = "";
-            if(ev.type === 'leave') extTxt = ev.leaveType==='full'?'(종일)':(ev.leaveType==='am'?'(오전반차)':'(오후반차)');
+            if(ev.type === 'leave') extTxt = ev.leaveType === 'full' ? '(종일)' : '(반차)';
 
             return `<div class="list-item ${ev.isDone?'done':''}">
                 <div class="color-bar" style="background:${colorHex}"></div>
