@@ -181,6 +181,21 @@
         .day-sun { background-color: rgba(224, 49, 49, 0.08) !important; color: #e03131 !important; }
         .gantt-active { background-color: var(--primary-accent) !important; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.2); }
         .task-editable { background: transparent; border: none; color: #0dcaf0; font-weight: bold; width: 100%; outline: none; font-size: 0.75rem; }
+
+        /* 💡 V35: 공정표 메모 마커 (엑셀 스타일 우측 하단 노란 삼각형) 💡 */
+        .gantt-cell.has-memo::before {
+            content: '';
+            position: absolute;
+            right: 0;
+            bottom: 0;
+            width: 0;
+            height: 0;
+            border-bottom: 7px solid #fcc419;
+            border-left: 7px solid transparent;
+            pointer-events: none;
+            z-index: 2;
+        }
+        .gantt-cell.has-memo { cursor: help; }
         
         .excel-table { width: 100%; border-collapse: collapse; background: var(--card-bg); margin-bottom: 10px; table-layout: fixed; border: 2px solid #4b5563; }
         .excel-table td { border: 1px solid #4b5563; text-align: center; height: 38px; font-size: 0.85rem; color: white; padding: 0; }
@@ -1297,6 +1312,9 @@
     // 공정표 (Gantt)
     let ganttTasks = ["철거", "목공", "전기", "필름", "도장", "소방", "가구", "바닥", "유리", "금속", "사인", "설비", "청소", "기타 잔손"];
     let ganttDates = []; let ganttState = {}; let currentGanttId = null;
+    // 💡 V35: 공정표 메모 기능 전역 변수 💡
+    let ganttMemos = {};
+    let isGanttLongPress = false;
     
     function formatComma(input) { let val = input.value.replace(/[^0-9]/g, ''); input.value = val ? Number(val).toLocaleString() : ''; }
 
@@ -1305,7 +1323,7 @@
         let name = document.getElementById('newGanttName').value.trim(); let dVal = document.getElementById('newGanttDate').value.trim();
         if(!name || dVal.length !== 8) return alert("현장명과 착공일(8자리)을 입력하세요.");
         let start = new Date(dVal.substring(0,4), parseInt(dVal.substring(4,6))-1, dVal.substring(6,8));
-        ganttDates = []; ganttState = {}; currentGanttId = null; document.getElementById('ganttSiteName').value = name;
+        ganttDates = []; ganttState = {}; ganttMemos = {}; currentGanttId = null; document.getElementById('ganttSiteName').value = name;
         for(let i=0; i<45; i++) { let dt = new Date(start); dt.setDate(start.getDate()+i); ganttDates.push(dt); }
         document.getElementById('ganttDashboard').style.display = 'block'; document.getElementById('extraCostBody').innerHTML = ''; calcExtraSum(); renderGantt(); ganttModal.hide();
     }
@@ -1319,11 +1337,62 @@
         let html = `<thead>${monthHtml}<tr><th class="gantt-task-col text-secondary">공종</th>${thead}</tr></thead><tbody>`;
         ganttTasks.forEach((task, tIdx) => {
             html += `<tr><td class="gantt-task-col"><input type="text" class="task-editable" value="${task}" onchange="ganttTasks[${tIdx}]=this.value"></td>`;
-            ganttDates.forEach((d, dIdx) => { let key = `${tIdx}_${dIdx}`; let bg = d.getDay()===0?'day-sun':(d.getDay()===6?'day-sat':''); html += `<td class="gantt-cell ${bg} ${ganttState[key]?'gantt-active':''}" onclick="toggleGantt('${key}')"></td>`; }); html += `</tr>`;
+            ganttDates.forEach((d, dIdx) => {
+                let key = `${tIdx}_${dIdx}`;
+                let bg = d.getDay()===0?'day-sun':(d.getDay()===6?'day-sat':'');
+                // 💡 V35: 메모 마커 + 툴팁 추가 💡
+                let memo = ganttMemos[key];
+                let memoClass = memo ? 'has-memo' : '';
+                let tooltipAttr = memo ? `title="${memo.replace(/"/g, '&quot;')}"` : '';
+                html += `<td class="gantt-cell ${bg} ${ganttState[key]?'gantt-active':''} ${memoClass}" data-key="${key}" ${tooltipAttr} onclick="toggleGantt('${key}')"></td>`;
+            });
+            html += `</tr>`;
         });
         document.getElementById('ganttTable').innerHTML = html + `</tbody>`;
+        // 💡 V35: 렌더링 직후 길게 누르기 이벤트 재바인딩 💡
+        bindGanttLongPress();
     }
-    function toggleGantt(key) { ganttState[key] = !ganttState[key]; renderGantt(); }
+
+    // 💡 V35: 공정표 셀 길게 누르기(500ms) → 메모 입력/삭제 💡
+    function bindGanttLongPress() {
+        document.querySelectorAll('#ganttTable .gantt-cell').forEach(cell => {
+            let timer = null;
+            const startPress = (e) => {
+                timer = setTimeout(() => {
+                    isGanttLongPress = true;
+                    const key = cell.getAttribute('data-key');
+                    if(!key) return;
+                    const existing = ganttMemos[key] || '';
+                    const input = prompt('메모를 입력하세요 (빈칸 입력 시 삭제):', existing);
+                    if(input === null) {
+                        // 취소 버튼 - 아무것도 안 함
+                    } else if(input.trim() === '') {
+                        delete ganttMemos[key];
+                    } else {
+                        ganttMemos[key] = input.trim();
+                    }
+                    renderGantt();
+                    // 짧은 지연 후 플래그 리셋 (mouseup/touchend 잔여 처리 방지)
+                    setTimeout(() => { isGanttLongPress = false; }, 150);
+                }, 500);
+            };
+            const cancelPress = () => {
+                if(timer) { clearTimeout(timer); timer = null; }
+            };
+            cell.addEventListener('mousedown', startPress);
+            cell.addEventListener('touchstart', startPress, { passive: true });
+            cell.addEventListener('mouseup', cancelPress);
+            cell.addEventListener('mouseleave', cancelPress);
+            cell.addEventListener('touchend', cancelPress);
+            cell.addEventListener('touchcancel', cancelPress);
+        });
+    }
+    function toggleGantt(key) {
+        // 💡 V35: 길게 눌러서 메모창이 떴다면 색칠 동작 차단 💡
+        if(isGanttLongPress) return;
+        ganttState[key] = !ganttState[key];
+        renderGantt();
+    }
     function addGanttTaskRow() { ganttTasks.push("새 공종"); renderGantt(); }
     
     function addGanttDate() { let lastD = new Date(ganttDates[ganttDates.length-1]); lastD.setDate(lastD.getDate() + 1); ganttDates.push(lastD); renderGantt(); }
@@ -1393,7 +1462,7 @@
             tax: tr.querySelector('.ec-tax').checked, 
             note: tr.querySelector('.ec-note').value 
         }));
-        const data = { teamId: myTeamId, site: site, tasks: ganttTasks, dates: ganttDates.map(d=>d.toISOString()), state: ganttState, extra: extra, updatedAt: Date.now() };
+        const data = { teamId: myTeamId, site: site, tasks: ganttTasks, dates: ganttDates.map(d=>d.toISOString()), state: ganttState, memos: ganttMemos, extra: extra, updatedAt: Date.now() };
         if(currentGanttId) await db.collection("gantt_logs").doc(currentGanttId).update(data); else { const res = await db.collection("gantt_logs").add(data); currentGanttId = res.id; }
         alert("저장되었습니다.");
     }
@@ -1409,8 +1478,8 @@
         });
     }
     
-    async function loadGanttDoc(id) { const d = (await db.collection("gantt_logs").doc(id).get()).data(); currentGanttId = id; document.getElementById('ganttSiteName').value = d.site; ganttTasks = d.tasks; ganttState = d.state; ganttDates = d.dates.map(str => new Date(str)); document.getElementById('extraCostBody').innerHTML = ''; d.extra.forEach(ex => addExtraCostRow(ex)); document.getElementById('ganttDashboard').style.display = 'block'; renderGantt(); calcExtraSum(); window.scrollTo(0,0); }
-    async function deleteGantt() { if(confirm("이 공정표를 삭제하시겠습니까?")) { if(currentGanttId) await db.collection("gantt_logs").doc(currentGanttId).delete(); document.getElementById('ganttDashboard').style.display = 'none'; currentGanttId=null; } }
+    async function loadGanttDoc(id) { const d = (await db.collection("gantt_logs").doc(id).get()).data(); currentGanttId = id; document.getElementById('ganttSiteName').value = d.site; ganttTasks = d.tasks; ganttState = d.state; ganttMemos = d.memos || {}; ganttDates = d.dates.map(str => new Date(str)); document.getElementById('extraCostBody').innerHTML = ''; d.extra.forEach(ex => addExtraCostRow(ex)); document.getElementById('ganttDashboard').style.display = 'block'; renderGantt(); calcExtraSum(); window.scrollTo(0,0); }
+    async function deleteGantt() { if(confirm("이 공정표를 삭제하시겠습니까?")) { if(currentGanttId) await db.collection("gantt_logs").doc(currentGanttId).delete(); document.getElementById('ganttDashboard').style.display = 'none'; currentGanttId=null; ganttMemos = {}; } }
 
     // 작업일보 (V30: 우측 정렬 + 아코디언 상태 보존 로직 추가)
     let editingId = null; 
