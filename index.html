@@ -1181,58 +1181,102 @@
             </div>`;
         }).join('');
 
-        // 편집 모드일 때 Sortable 초기화
-        if(isStatusEditMode && canEditStatus) {
-            sections.forEach(sec => {
-                const items = data.filter(d => d.status === sec.key);
-                if(items.length === 0) return;
+        // 💡 V33 FIX: 렌더링 끝난 직후 Sortable 재초기화 - 깜빡임 방지 + 매번 보장 💡
+        // requestAnimationFrame으로 DOM 그리기 완료 후 실행
+        requestAnimationFrame(() => {
+            initStatusSortables(data, isStatusEditMode && canEditStatus);
+        });
+    }
 
-                // PC 테이블 Sortable
-                const tbody = document.getElementById(`status-tbody-${sec.key}`);
-                if(tbody && !statusSortables[`table-${sec.key}`]) {
-                    statusSortables[`table-${sec.key}`] = Sortable.create(tbody, {
-                        handle: '.drag-handle',
-                        animation: 150,
-                        ghostClass: 'sortable-ghost',
-                        onEnd: async function() { await saveStatusOrder(sec.key); }
-                    });
-                }
+    // 💡 V33 FIX: Sortable 인스턴스 재초기화 전용 함수 (파괴 → 재건축 사이클) 💡
+    function initStatusSortables(data, enable) {
+        // STEP 1: 기존 인스턴스 무조건 전부 파괴 (먹통 방지의 핵심!)
+        Object.keys(statusSortables).forEach(k => {
+            try { statusSortables[k].destroy(); } catch(e) { /* 이미 파괴됐으면 무시 */ }
+        });
+        statusSortables = {};
 
-                // 모바일 카드 Sortable
-                const cards = document.getElementById(`status-cards-${sec.key}`);
-                if(cards && !statusSortables[`cards-${sec.key}`]) {
-                    statusSortables[`cards-${sec.key}`] = Sortable.create(cards, {
-                        handle: '.drag-handle',
-                        animation: 150,
-                        ghostClass: 'sortable-ghost',
-                        onEnd: async function() { await saveStatusOrder(sec.key); }
-                    });
-                }
-            });
-        } else {
-            // 편집 모드 해제 시 Sortable 제거
-            Object.keys(statusSortables).forEach(k => { statusSortables[k].destroy(); });
-            statusSortables = {};
-        }
+        // STEP 2: 편집 모드 OFF일 때는 종료 (파괴만 하고 재생성 안 함)
+        if(!enable) return;
+
+        // STEP 3: 편집 모드 ON일 때만 새로 바인딩
+        const sectionKeys = ['ongoing', 'scheduled', 'designing', 'pre-design'];
+        sectionKeys.forEach(secKey => {
+            const items = data.filter(d => d.status === secKey);
+            if(items.length === 0) return;
+
+            // PC 테이블 Sortable 재생성
+            const tbody = document.getElementById(`status-tbody-${secKey}`);
+            if(tbody) {
+                statusSortables[`table-${secKey}`] = Sortable.create(tbody, {
+                    handle: '.drag-handle',
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    dragClass: 'sortable-drag',
+                    onEnd: async function(evt) {
+                        // 순서가 실제로 바뀐 경우에만 DB 업데이트
+                        if(evt.oldIndex !== evt.newIndex) {
+                            await saveStatusOrder(secKey);
+                        }
+                    }
+                });
+            }
+
+            // 모바일 카드 Sortable 재생성
+            const cards = document.getElementById(`status-cards-${secKey}`);
+            if(cards) {
+                statusSortables[`cards-${secKey}`] = Sortable.create(cards, {
+                    handle: '.drag-handle',
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    dragClass: 'sortable-drag',
+                    onEnd: async function(evt) {
+                        if(evt.oldIndex !== evt.newIndex) {
+                            await saveStatusOrder(secKey);
+                        }
+                    }
+                });
+            }
+        });
     }
 
     // 💡 V32: Sortable 순서 Firebase 저장 💡
+    // 💡 V33 FIX: 순서 저장 - 화면에 보이는 영역 기준으로 우선 저장 (PC/모바일 자동 분기) 💡
     async function saveStatusOrder(secKey) {
         const batch = db.batch();
-        // PC 테이블 기준으로 저장 (모바일 카드와 동기화)
+        const seenIds = new Set();  // 중복 방지
+
+        // PC 테이블에서 먼저 수집
         const rows = document.querySelectorAll(`#status-tbody-${secKey} tr[data-id]`);
-        if(rows.length > 0) {
-            rows.forEach((row, idx) => {
-                batch.update(db.collection("site_status").doc(row.getAttribute('data-id')), { order: idx });
-            });
-        } else {
-            // 모바일 카드 기준으로 저장
+        let idx = 0;
+        rows.forEach(row => {
+            const id = row.getAttribute('data-id');
+            if(id && !seenIds.has(id)) {
+                seenIds.add(id);
+                batch.update(db.collection("site_status").doc(id), { order: idx++ });
+            }
+        });
+
+        // 모바일 카드도 별도로 수집 (PC가 비어있는 모바일 환경 대응)
+        if(seenIds.size === 0) {
             const cards = document.querySelectorAll(`#status-cards-${secKey} [data-id]`);
-            cards.forEach((card, idx) => {
-                batch.update(db.collection("site_status").doc(card.getAttribute('data-id')), { order: idx });
+            cards.forEach(card => {
+                const id = card.getAttribute('data-id');
+                if(id && !seenIds.has(id)) {
+                    seenIds.add(id);
+                    batch.update(db.collection("site_status").doc(id), { order: idx++ });
+                }
             });
         }
-        await batch.commit();
+
+        if(seenIds.size > 0) {
+            try {
+                await batch.commit();
+            } catch(e) {
+                console.error('순서 저장 실패:', e);
+                alert('순서 저장 중 오류가 발생했습니다. 다시 시도해주세요.');
+            }
+        }
     }
 
         // 💡 V32: changeStatusOrder 제거 - 드래그앤드롭(saveStatusOrder)으로 대체됨 💡
