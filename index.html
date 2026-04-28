@@ -183,7 +183,7 @@
         body.light-mode .drag-handle { color: #adb5bd !important; }
         body.light-mode .gantt-table tbody tr:hover td { background: rgba(0,0,0,0.05); }
         
-        .gantt-task-col { position: sticky; left: 0; background: var(--card-bg) !important; z-index: 10; min-width: 65px; max-width: 65px; width: 65px; text-align: left !important; border-right: 2px solid var(--primary-accent) !important; padding: 0 5px !important; }
+        .gantt-task-col { position: sticky; left: 0; background: var(--card-bg) !important; z-index: 10; min-width: 90px; max-width: 90px; width: 90px; text-align: left !important; border-right: 2px solid var(--primary-accent) !important; padding: 0 5px !important; }
         
         .gantt-month-row th { background: #181b24; color: #ced4da; font-weight: bold; border-bottom: 2px solid rgba(255,255,255,0.1); }
         .day-sat { background-color: rgba(92, 124, 250, 0.08) !important; color: #5c7cfa !important; }
@@ -972,13 +972,17 @@
     // 💡 V30: 작업일보 아코디언 상태 보존용 메모리 객체 💡
     let worklogCollapsedStates = {};
 
-    // 💡 V31 FIX: 작업일보 초기 데이터 (teamData 전역 선언) - 목수/도장/필름/전기 4대 공정 기본 세팅 💡
-    let teamData = [
+    const DEFAULT_WORKLOG_TEAMS = [
         { teamName: "목수", workers: [] },
         { teamName: "도장", workers: [] },
         { teamName: "필름", workers: [] },
         { teamName: "전기", workers: [] }
     ];
+    function createDefaultTeamData() {
+        return DEFAULT_WORKLOG_TEAMS.map(team => ({ teamName: team.teamName, workers: [] }));
+    }
+    // 💡 V31 FIX: 작업일보 초기 데이터 (teamData 전역 선언) - 목수/도장/필름/전기 4대 공정 기본 세팅 💡
+    let teamData = createDefaultTeamData();
 
     document.addEventListener("DOMContentLoaded", function() { 
         siteModal = new bootstrap.Modal(document.getElementById('siteModal')); 
@@ -1002,7 +1006,39 @@
         else { btn.innerHTML = '<i class="bi bi-brightness-high-fill"></i> <span>화이트 모드로 전환</span>'; btn.classList.replace('btn-outline-dark', 'btn-outline-secondary'); }
     }
 
-    function showPage(pageId, el, pushState = true) {
+    function resetAllPageDrafts() {
+        editingId = null;
+        currentGanttId = null;
+        t5EditingId = null;
+        siteEditingId = null;
+        currentGanttMemoKey = null;
+
+        teamData = createDefaultTeamData();
+        ganttState = {};
+        ganttDates = [];
+        ganttMemos = {};
+        calculatedData = null;
+
+        const resetTargets = [
+            'siteName', 'logMonth', 'ganttSiteName', 'newGanttName', 'newGanttDate',
+            't5-site-title', 'input-notice', 'input-memo',
+            'f_siteName', 'f_date1', 'f_date2', 'f_site_manager', 'f_designer', 'f_designer_sign', 'f_etc'
+        ];
+        resetTargets.forEach(id => {
+            const el = document.getElementById(id);
+            if(!el) return;
+            if(el.tagName === 'SELECT') el.selectedIndex = 0;
+            else el.value = '';
+        });
+
+        const t5Container = document.getElementById('t5-input-container');
+        if(t5Container) t5Container.innerHTML = '';
+        const teamContainer = document.getElementById('team-container');
+        if(teamContainer) teamContainer.innerHTML = '';
+    }
+
+    function showPage(pageId, el, pushState = true, shouldResetDraft = true) {
+        if(shouldResetDraft) resetAllPageDrafts();
         document.querySelectorAll('.page-section').forEach(p => p.classList.remove('active'));
         document.getElementById('page-' + pageId).classList.add('active');
         if(el) { document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); el.classList.add('active'); }
@@ -1015,6 +1051,16 @@
         if(pageId === 'profile') { document.getElementById('editNickname').value = userNickname; document.getElementById('editEmail').value = myEmail; }
         // 💡 V31 FIX: 존재하지 않는 'checklist' 페이지 참조 제거 (실제 ID는 'punch') 💡
         if(pageId === 'punch') { loadPunchSummaryCards(); }
+        if(pageId === 'worklog') {
+            const monthInput = document.getElementById('logMonth');
+            if(monthInput && !monthInput.value) monthInput.value = new Date().toISOString().slice(0,7);
+            renderAllTeams();
+        }
+        if(pageId === 'gantt') {
+            document.getElementById('ganttDashboard').style.display = 'none';
+            document.getElementById('ganttTable').innerHTML = '';
+            document.getElementById('extraCostBody').innerHTML = '';
+        }
     }
     
     function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); document.getElementById('sidebarOverlay').classList.toggle('active'); }
@@ -1135,83 +1181,87 @@
     // 💡 V32: 게시판 (공지/전달내용 드래그앤드롭 순서 편집 추가) 💡
     let noticeSortable = null;
     let memoSortable = null;
+    let noticesUnsub = null;
+    let memosUnsub = null;
+    let cachedNotices = [];
+    let cachedMemos = [];
 
-    function loadBoardMemos() {
+    function renderBoardLists() {
         let isSuper = (myRole === 'owner' || myRole === 'admin');
         let canDeleteNotice = isSuper || globalNoticeAdmins.includes(myEmail);
         let canEditBoard = isSuper || globalNoticeAdmins.includes(myEmail);
+        let showManageUI = canEditBoard && isStatusEditMode;
 
-        db.collection("notices").where("teamId", "==", myTeamId).orderBy("createdAt", "desc").onSnapshot(ss => {
-            // 💡 V32 FIX: createdAt 기준 로드 후 order 필드 있으면 재정렬 (기존 데이터 보호) 💡
-            let notices = ss.docs.map(doc => ({ id: doc.id, ...doc.data(), dateStr: new Date(doc.data().createdAt).toLocaleDateString().slice(5) }))
+        document.getElementById('home-notice-list').innerHTML = cachedNotices.slice(0,5).map(n => `<div class="mb-1 text-truncate">• ${n.text}</div>`).join('') || '내용 없음';
+        document.getElementById('home-msg-list').innerHTML = cachedMemos.slice(0,5).map(n => `<div class="mb-1 text-truncate">• ${n.text}</div>`).join('') || '내용 없음';
+
+        let noticeDragHandle = showManageUI ? `<i class="bi bi-grip-vertical drag-handle me-2"></i>` : '';
+        document.getElementById('manage-notice-list').innerHTML = cachedNotices.map(n =>
+            `<div class="board-item d-flex justify-content-between align-items-center" data-id="${n.id}">
+                <div class="d-flex align-items-center flex-grow-1 overflow-hidden">
+                    ${noticeDragHandle}
+                    <span class="text-truncate">${n.text} <span class="small text-secondary ms-2">${n.dateStr}</span></span>
+                </div>
+                ${(showManageUI && canDeleteNotice) ? `<button class="btn btn-sm text-danger p-0 ms-2 flex-shrink-0" onclick="delOldNotice('${n.id}')"><i class="bi bi-trash"></i></button>` : ''}
+            </div>`
+        ).join('');
+
+        let memoDragHandle = showManageUI ? `<i class="bi bi-grip-vertical drag-handle me-2"></i>` : '';
+        document.getElementById('manage-memo-list').innerHTML = cachedMemos.map(n =>
+            `<div class="board-item d-flex justify-content-between align-items-center" style="border-color:var(--success-btn);" data-id="${n.id}">
+                <div class="d-flex align-items-center flex-grow-1 overflow-hidden">
+                    ${memoDragHandle}
+                    <span class="text-truncate">${n.text} <span class="small text-secondary ms-2">${n.dateStr}</span></span>
+                </div>
+                ${showManageUI ? `<button class="btn btn-sm text-danger p-0 ms-2 flex-shrink-0" onclick="delBoardItem('${n.id}')"><i class="bi bi-trash"></i></button>` : ''}
+            </div>`
+        ).join('');
+
+        if(noticeSortable) { noticeSortable.destroy(); noticeSortable = null; }
+        if(memoSortable) { memoSortable.destroy(); memoSortable = null; }
+
+        if(showManageUI) {
+            noticeSortable = Sortable.create(document.getElementById('manage-notice-list'), {
+                handle: '.drag-handle',
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                dragClass: 'sortable-drag',
+                onEnd: async function() {
+                    const items = document.querySelectorAll('#manage-notice-list .board-item');
+                    const batch = db.batch();
+                    items.forEach((el, idx) => batch.update(db.collection("notices").doc(el.getAttribute('data-id')), { order: idx }));
+                    await batch.commit();
+                }
+            });
+            memoSortable = Sortable.create(document.getElementById('manage-memo-list'), {
+                handle: '.drag-handle',
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                dragClass: 'sortable-drag',
+                onEnd: async function() {
+                    const items = document.querySelectorAll('#manage-memo-list .board-item');
+                    const batch = db.batch();
+                    items.forEach((el, idx) => batch.update(db.collection("board_memos").doc(el.getAttribute('data-id')), { order: idx }));
+                    await batch.commit();
+                }
+            });
+        }
+    }
+
+    function loadBoardMemos() {
+        if(!myTeamId) return;
+        if(noticesUnsub && memosUnsub) return renderBoardLists();
+
+        noticesUnsub = db.collection("notices").where("teamId", "==", myTeamId).orderBy("createdAt", "desc").onSnapshot(ss => {
+            cachedNotices = ss.docs.map(doc => ({ id: doc.id, ...doc.data(), dateStr: new Date(doc.data().createdAt).toLocaleDateString().slice(5) }))
                 .sort((a,b) => (a.order !== undefined && b.order !== undefined) ? a.order - b.order : b.createdAt - a.createdAt);
-            document.getElementById('home-notice-list').innerHTML = notices.slice(0,5).map(n => `<div class="mb-1 text-truncate">• ${n.text}</div>`).join('') || '내용 없음';
-            
-            let dragHandle = canEditBoard ? `<i class="bi bi-grip-vertical drag-handle me-2"></i>` : '';
-            document.getElementById('manage-notice-list').innerHTML = notices.map(n =>
-                `<div class="board-item d-flex justify-content-between align-items-center" data-id="${n.id}">
-                    <div class="d-flex align-items-center flex-grow-1 overflow-hidden">
-                        ${dragHandle}
-                        <span class="text-truncate">${n.text} <span class="small text-secondary ms-2">${n.dateStr}</span></span>
-                    </div>
-                    ${canDeleteNotice ? `<button class="btn btn-sm text-danger p-0 ms-2 flex-shrink-0" onclick="delOldNotice('${n.id}')"><i class="bi bi-trash"></i></button>` : ''}
-                </div>`
-            ).join('');
-
-            // Sortable 초기화 (편집 권한 있을 때만)
-            if(canEditBoard) {
-                if(noticeSortable) noticeSortable.destroy();
-                noticeSortable = Sortable.create(document.getElementById('manage-notice-list'), {
-                    handle: '.drag-handle',
-                    animation: 150,
-                    ghostClass: 'sortable-ghost',
-                    dragClass: 'sortable-drag',
-                    onEnd: async function(evt) {
-                        const items = document.querySelectorAll('#manage-notice-list .board-item');
-                        const batch = db.batch();
-                        items.forEach((el, idx) => {
-                            batch.update(db.collection("notices").doc(el.getAttribute('data-id')), { order: idx });
-                        });
-                        await batch.commit();
-                    }
-                });
-            }
+            renderBoardLists();
         });
 
-        db.collection("board_memos").where("teamId", "==", myTeamId).where("type", "==", "memo").orderBy("createdAt", "desc").onSnapshot(ss => {
-            // 💡 V32 FIX: createdAt 기준 로드 후 order 있으면 재정렬 💡
-            let memos = ss.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+        memosUnsub = db.collection("board_memos").where("teamId", "==", myTeamId).where("type", "==", "memo").orderBy("createdAt", "desc").onSnapshot(ss => {
+            cachedMemos = ss.docs.map(doc => ({ id: doc.id, ...doc.data() }))
                 .sort((a,b) => (a.order !== undefined && b.order !== undefined) ? a.order - b.order : b.createdAt - a.createdAt);
-            document.getElementById('home-msg-list').innerHTML = memos.slice(0,5).map(n => `<div class="mb-1 text-truncate">• ${n.text}</div>`).join('') || '내용 없음';
-
-            let dragHandle = canEditBoard ? `<i class="bi bi-grip-vertical drag-handle me-2"></i>` : '';
-            document.getElementById('manage-memo-list').innerHTML = memos.map(n =>
-                `<div class="board-item d-flex justify-content-between align-items-center" style="border-color:var(--success-btn);" data-id="${n.id}">
-                    <div class="d-flex align-items-center flex-grow-1 overflow-hidden">
-                        ${dragHandle}
-                        <span class="text-truncate">${n.text} <span class="small text-secondary ms-2">${n.dateStr}</span></span>
-                    </div>
-                    <button class="btn btn-sm text-danger p-0 ms-2 flex-shrink-0" onclick="delBoardItem('${n.id}')"><i class="bi bi-trash"></i></button>
-                </div>`
-            ).join('');
-
-            if(canEditBoard) {
-                if(memoSortable) memoSortable.destroy();
-                memoSortable = Sortable.create(document.getElementById('manage-memo-list'), {
-                    handle: '.drag-handle',
-                    animation: 150,
-                    ghostClass: 'sortable-ghost',
-                    dragClass: 'sortable-drag',
-                    onEnd: async function(evt) {
-                        const items = document.querySelectorAll('#manage-memo-list .board-item');
-                        const batch = db.batch();
-                        items.forEach((el, idx) => {
-                            batch.update(db.collection("board_memos").doc(el.getAttribute('data-id')), { order: idx });
-                        });
-                        await batch.commit();
-                    }
-                });
-            }
+            renderBoardLists();
         });
     }
 
@@ -1233,6 +1283,7 @@
         isStatusEditMode = !isStatusEditMode;
         document.getElementById('btnEditStatus').classList.toggle('active', isStatusEditMode);
         renderAllSections(globalStatusData);
+        renderBoardLists();
     }
 
     function loadAllStatusData() {
@@ -1641,14 +1692,59 @@
     }
 
     function captureGantt() {
-        const area = document.getElementById('captureArea'); const wrap = document.getElementById('ganttScrollWrapper'); let sn = document.getElementById('ganttSiteName').value.trim() || '현장';
-        const orig = wrap.style.overflowX; wrap.style.overflowX = 'visible'; area.style.width = 'max-content';
+        const area = document.getElementById('captureArea');
+        const wrap = document.getElementById('ganttScrollWrapper');
+        let sn = document.getElementById('ganttSiteName').value.trim() || '현장';
+
+        const origOverflowX = wrap.style.overflowX;
+        const origWidth = area.style.width;
+        const stickyCols = Array.from(area.querySelectorAll('.gantt-task-col'));
+        const stickyBackup = stickyCols.map(col => ({ el: col, position: col.style.position, left: col.style.left, zIndex: col.style.zIndex }));
+        const replacedInputs = [];
+
+        wrap.style.overflowX = 'visible';
+        area.style.width = 'max-content';
+        stickyBackup.forEach(({ el }) => {
+            el.style.position = 'static';
+            el.style.left = 'auto';
+            el.style.zIndex = 'auto';
+        });
+
+        area.querySelectorAll('input').forEach(input => {
+            const type = (input.type || '').toLowerCase();
+            if(type === 'hidden' || type === 'checkbox' || type === 'radio') return;
+            const textNode = document.createElement('span');
+            textNode.className = 'gantt-capture-text';
+            textNode.textContent = input.value || input.placeholder || '';
+            textNode.style.display = 'inline-block';
+            textNode.style.width = '100%';
+            textNode.style.minHeight = input.offsetHeight ? `${input.offsetHeight}px` : '20px';
+            textNode.style.padding = '2px 4px';
+            textNode.style.whiteSpace = 'nowrap';
+            textNode.style.overflow = 'hidden';
+            textNode.style.textOverflow = 'ellipsis';
+            input.style.display = 'none';
+            input.insertAdjacentElement('afterend', textNode);
+            replacedInputs.push({ input, textNode });
+        });
+
         setTimeout(() => {
             html2canvas(area, { backgroundColor: document.body.classList.contains('light-mode') ? '#ffffff' : '#1e222d', scale: 2 }).then(canvas => {
-                wrap.style.overflowX = orig; area.style.width = 'auto';
-                let link = document.createElement('a'); link.download = `${sn}_예상_공정표.png`; link.href = canvas.toDataURL(); link.click();
+                let link = document.createElement('a');
+                link.download = `${sn}_예상_공정표.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+            }).finally(() => {
+                replacedInputs.forEach(({ input, textNode }) => { input.style.display = ''; textNode.remove(); });
+                stickyBackup.forEach(({ el, position, left, zIndex }) => {
+                    el.style.position = position;
+                    el.style.left = left;
+                    el.style.zIndex = zIndex;
+                });
+                wrap.style.overflowX = origOverflowX;
+                area.style.width = origWidth || 'auto';
             });
-        }, 200); 
+        }, 100);
     }
     
     function addExtraCostRow(data = {}) {
@@ -1710,8 +1806,15 @@
     let editingId = null; 
     
     function renderAllTeams() {
-        const container = document.getElementById('team-container'); 
-        const [year, month] = (document.getElementById('logMonth').value||"2026-04").split('-').map(Number); 
+        teamData = createDefaultTeamData().map((baseTeam, idx) => {
+            const existing = teamData[idx];
+            if(existing && existing.teamName === baseTeam.teamName) {
+                return { teamName: existing.teamName, workers: Array.isArray(existing.workers) ? existing.workers : [] };
+            }
+            return baseTeam;
+        });
+        const container = document.getElementById('team-container');
+        const [year, month] = (document.getElementById('logMonth').value||"2026-04").split('-').map(Number);
         const lastDay = new Date(year, month, 0).getDate();
         
         container.innerHTML = teamData.map((team, tIdx) => {
@@ -1805,8 +1908,8 @@
         let delBtnHtml = (myRole !== 'member') ? `<button class="t5-btn-small bg-danger text-white" onclick="deleteLog('${doc.id}')">삭제</button>` : '';
         let btnHtml = `<button class="t5-btn-small bg-secondary text-white" onclick="editLog('${doc.id}')">수정</button><button class="t5-btn-small bg-primary text-white" onclick="copyLog('${doc.id}')">복사</button><button class="t5-btn-small bg-success text-white" onclick="exportToExcel('${doc.id}')">엑셀</button>${delBtnHtml}`; 
         return `<div class="col-md-6"><div class="t5-card p-3 m-0 d-flex justify-content-between align-items-center"><div><b class="text-primary">${d.month}</b><br>${d.site}<br><span class="small text-secondary">작성: ${d.originalWriter||'관리자'} ${d.lastModifier?`/ 수정: ${d.lastModifier}`:''}</span></div><div class="d-flex gap-1 flex-wrap justify-content-end" style="max-width: 60%;">${btnHtml}</div></div></div>`; }).join(''); }); }
-    async function editLog(id) { const d = (await db.collection("monthly_logs").doc(id).get()).data(); editingId = id; document.getElementById('logMonth').value = d.month; document.getElementById('siteName').value = d.site; teamData = d.teamData; showPage('worklog'); renderAllTeams(); window.scrollTo(0,0); }
-    async function copyLog(id) { const d = (await db.collection("monthly_logs").doc(id).get()).data(); editingId = null; document.getElementById('logMonth').value = d.month; document.getElementById('siteName').value = d.site + " (복사)"; teamData = d.teamData; showPage('worklog'); renderAllTeams(); alert("데이터가 복사되었습니다."); window.scrollTo(0,0); }
+    async function editLog(id) { const d = (await db.collection("monthly_logs").doc(id).get()).data(); editingId = id; document.getElementById('logMonth').value = d.month; document.getElementById('siteName').value = d.site; teamData = d.teamData; showPage('worklog', null, true, false); renderAllTeams(); window.scrollTo(0,0); }
+    async function copyLog(id) { const d = (await db.collection("monthly_logs").doc(id).get()).data(); editingId = null; document.getElementById('logMonth').value = d.month; document.getElementById('siteName').value = d.site + " (복사)"; teamData = d.teamData; showPage('worklog', null, true, false); renderAllTeams(); alert("데이터가 복사되었습니다."); window.scrollTo(0,0); }
     async function deleteLog(id) { if(confirm("이 작업일보를 완전히 삭제하시겠습니까?")) { await db.collection("monthly_logs").doc(id).delete(); } }
     async function exportToExcel(id) { 
         const d_raw = (await db.collection("monthly_logs").doc(id).get()).data(); const [year, monthNum] = d_raw.month.split('-'); const lastDayNum = new Date(year, monthNum, 0).getDate(); 
@@ -1881,8 +1984,8 @@
     }
     async function saveT5ToHistory() { if(!calculatedData) return; const data = { teamId: myTeamId, ...calculatedData, writer: userNickname, updatedAt: Date.now() }; if (t5EditingId) await db.collection("t5_logs").doc(t5EditingId).update(data); else await db.collection("t5_logs").add({...data, createdAt: Date.now()}); location.reload(); }
     function loadT5History() { db.collection("t5_logs").where("teamId","==",myTeamId).orderBy("updatedAt","desc").limit(20).onSnapshot(ss => { document.getElementById('t5-history-list').innerHTML = ss.docs.map(d => { const doc = d.data(); let modifyBtns = `<button class="t5-btn-small bg-secondary text-white" style="flex:1;" onclick="editT5Log('${d.id}')">수정</button><button class="t5-btn-small bg-primary text-white" style="flex:1;" onclick="copyAndNewT5Log('${d.id}')">복사</button><button class="t5-btn-small bg-success text-white" style="flex:1;" onclick="copyT5Order('${doc.siteName}', '${doc.resultText}')">발주용</button><button class="t5-btn-small bg-danger text-white" style="flex:1;" onclick="deleteT5Log('${d.id}')">삭제</button>`; return `<div class="history-card"><h6 class="fw-bold">${doc.siteName} <span class="small text-secondary ms-2">${doc.writer}</span></h6><p class="small text-secondary mb-3">${doc.resultText}</p><div class="d-flex gap-2 flex-wrap">${modifyBtns}</div></div>`; }).join(''); }); }
-    async function editT5Log(id) { const d = (await db.collection("t5_logs").doc(id).get()).data(); t5EditingId = id; document.getElementById('t5-site-title').value = d.siteName; const container = document.getElementById('t5-input-container'); container.innerHTML = ''; d.rows.forEach(r => { let div = document.createElement('div'); div.className = "row g-2 mb-2 t5-row-item"; div.innerHTML = `<div class="col-6"><input type="text" class="form-control input-dark t5-section-name" value="${r.section}"></div><div class="col-6"><input type="number" class="form-control input-dark t5-length-val" value="${r.length}"></div>`; container.appendChild(div); }); showPage('t5'); window.scrollTo(0,0); }
-    async function copyAndNewT5Log(id) { const d = (await db.collection("t5_logs").doc(id).get()).data(); t5EditingId = null; document.getElementById('t5-site-title').value = d.siteName + " (복사)"; const container = document.getElementById('t5-input-container'); container.innerHTML = ''; d.rows.forEach(r => { let div = document.createElement('div'); div.className = "row g-2 mb-2 t5-row-item"; div.innerHTML = `<div class="col-6"><input type="text" class="form-control input-dark t5-section-name" value="${r.section}"></div><div class="col-6"><input type="number" class="form-control input-dark t5-length-val" value="${r.length}"></div>`; container.appendChild(div); }); showPage('t5'); alert("복사되었습니다."); window.scrollTo(0,0); }
+    async function editT5Log(id) { const d = (await db.collection("t5_logs").doc(id).get()).data(); t5EditingId = id; document.getElementById('t5-site-title').value = d.siteName; const container = document.getElementById('t5-input-container'); container.innerHTML = ''; d.rows.forEach(r => { let div = document.createElement('div'); div.className = "row g-2 mb-2 t5-row-item"; div.innerHTML = `<div class="col-6"><input type="text" class="form-control input-dark t5-section-name" value="${r.section}"></div><div class="col-6"><input type="number" class="form-control input-dark t5-length-val" value="${r.length}"></div>`; container.appendChild(div); }); showPage('t5', null, true, false); window.scrollTo(0,0); }
+    async function copyAndNewT5Log(id) { const d = (await db.collection("t5_logs").doc(id).get()).data(); t5EditingId = null; document.getElementById('t5-site-title').value = d.siteName + " (복사)"; const container = document.getElementById('t5-input-container'); container.innerHTML = ''; d.rows.forEach(r => { let div = document.createElement('div'); div.className = "row g-2 mb-2 t5-row-item"; div.innerHTML = `<div class="col-6"><input type="text" class="form-control input-dark t5-section-name" value="${r.section}"></div><div class="col-6"><input type="number" class="form-control input-dark t5-length-val" value="${r.length}"></div>`; container.appendChild(div); }); showPage('t5', null, true, false); alert("복사되었습니다."); window.scrollTo(0,0); }
     // 💡 V31 FIX: T5 발주용 복사도 최신 Clipboard API 사용 💡
     function copyT5Order(site, text) { 
         const fmt = site + '\n' + text.split(' / ').join('\n'); 

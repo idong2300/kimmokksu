@@ -48,7 +48,9 @@
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: rgba(255,255,255,0.1); gap: 1px; } 
         .cal-day { background: #1e222d; min-height: 140px; padding: 6px 0; cursor: pointer; transition: 0.2s; position: relative; display: flex; flex-direction: column; gap: 2px; }
         .cal-day:hover, .cal-day.selected { background: rgba(92, 124, 250, 0.1); }
-        .cal-date-num { font-size: 0.85rem; font-weight: bold; margin-bottom: 6px; padding-left: 8px; }
+        .cal-date-num { font-size: 0.85rem; font-weight: bold; margin-bottom: 6px; padding-left: 8px; display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; border-radius: 999px; }
+        .cal-date-num.today-highlight { background: #3b82f6; color: #fff !important; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25); }
+        body.light-mode .cal-date-num.today-highlight { background: #2563eb; color: #fff !important; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2); }
         
         .event-badge { font-size: 0.75rem; padding: 3px 6px; color: white; white-space: nowrap; overflow: hidden; text-overflow: clip; text-align: left; line-height: 1.2; margin-bottom: 1px; height: 24px; width: 100%; border-radius: 0; display: flex; align-items: center; }
         .event-start { border-top-left-radius: 4px; border-bottom-left-radius: 4px; margin-left: 4px; width: calc(100% - 4px); }
@@ -408,6 +410,7 @@
         let year = currentDate.getFullYear(), month = currentDate.getMonth();
         document.getElementById('currentMonthDisplay').innerText = `${year}. ${String(month+1).padStart(2,'0')}`;
         let firstDay = new Date(year, month, 1).getDay(), daysInMonth = new Date(year, month + 1, 0).getDate();
+        let todayStr = new Date().toISOString().split('T')[0];
         
         let html = '';
         for(let i=0; i<firstDay; i++) html += `<div class="cal-day" style="background:rgba(0,0,0,0.1); cursor:default;"></div>`;
@@ -416,6 +419,7 @@
             let dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
             let dw = new Date(year, month, i).getDay();
             let isSelected = dateStr === selectedDateStr ? 'selected' : '';
+            let isToday = dateStr === todayStr;
             
             let dayEvents = allEvents.filter(ev => {
                 if(!activeFilters.has('all') && !activeFilters.has(ev.type)) return false;
@@ -461,7 +465,7 @@
             if(hiddenCount > 0) { badgesHtml += `<div class="more-btn" onclick="event.stopPropagation(); selectDate('${dateStr}')">+${hiddenCount} 더보기</div>`; }
 
             html += `<div class="cal-day ${isSelected}" onclick="selectDate('${dateStr}')">
-                <div class="cal-date-num" style="color:${dw===0?'#e03131':(dw===6?'#5c7cfa':'#94a3b8')}">${i}</div>
+                <div class="cal-date-num ${isToday ? 'today-highlight' : ''}" style="color:${dw===0?'#e03131':(dw===6?'#5c7cfa':'#94a3b8')}">${i}</div>
                 ${badgesHtml}
             </div>`;
         }
