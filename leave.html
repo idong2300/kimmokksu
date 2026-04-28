@@ -340,148 +340,346 @@
     //  · 1년차 미만(입사 후 1년 X): 1개월 개근 시 1일씩 (최대 11일)
     //  · 2년차(입사 후 1년~2년): Math.ceil(15 * 전년근무일수 / 365)
     //  · 3년차+ (입사 후 2년 이상): 기본 15일 + 3년차 1일 추가, 이후 매 2년마다 1일 추가, 최대 25일
-    function calculateAnnualLeave(joinDateStr) {
-        if(!joinDateStr) return { base: 0, bonus: 0, total: 0, yearsOfService: 0, label: '입사일 미입력' };
+    function emptyLeaveCalc(label = '입사일 미입력') {
+        return {
+            base: 0,
+            bonus: 0,
+            total: 0,
+            yearsOfService: 0,
+            label: label,
+            isValid: false
+        };
+    }
 
-        const joinDate = new Date(joinDateStr);
-        if(isNaN(joinDate.getTime())) return { base: 0, bonus: 0, total: 0, yearsOfService: 0, label: '날짜 오류' };
+    function escapeLeaveHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
 
-        const today = new Date();
-        const currentYear = today.getFullYear();
-        // 회계연도 시작일 (올해 1월 1일)
-        const fiscalStart = new Date(currentYear, 0, 1);
-        // 작년 1월 1일 (전년근무일수 계산용)
-        const lastFiscalStart = new Date(currentYear - 1, 0, 1);
-        const lastFiscalEnd = new Date(currentYear - 1, 11, 31);
+    function escapeLeaveJs(value) {
+        return String(value ?? '')
+            .replace(/\\/g, '\\\\')
+            .replace(/'/g, "\\'")
+            .replace(/"/g, '\\"')
+            .replace(/\n/g, '\\n')
+            .replace(/\r/g, '\\r');
+    }
 
-        // 입사 후 경과 일수 / 년수 (오늘 기준, 회계연도와 별개)
-        const msPerDay = 1000 * 60 * 60 * 24;
-        const daysSinceJoin = Math.floor((today - joinDate) / msPerDay);
-        const yearsOfService = Math.floor(daysSinceJoin / 365);
+    function parseHireDateSafely(hireDate) {
+        if(!hireDate) return null;
 
-        let base = 0, bonus = 0, label = '';
-
-        if(yearsOfService < 1) {
-            // 1년차 미만: 입사 후 만 개월 수만큼 1일씩, 최대 11일
-            // (입사일~오늘 사이에 완료된 달 수)
-            let monthsCompleted = (today.getFullYear() - joinDate.getFullYear()) * 12 + (today.getMonth() - joinDate.getMonth());
-            // 일자가 입사일보다 작으면 아직 한 달이 안 지난 것
-            if(today.getDate() < joinDate.getDate()) monthsCompleted -= 1;
-            if(monthsCompleted < 0) monthsCompleted = 0;
-            base = Math.min(monthsCompleted, 11);
-            bonus = 0;
-            label = `1년차 미만 (${monthsCompleted}개월 개근)`;
-        } else if(yearsOfService < 2) {
-            // 2년차: 전년도 근무일수 비례 (Math.ceil(15 * 근무일/365))
-            // 전년도 근무 시작 = max(입사일, 작년 1월 1일)
-            const lastWorkStart = joinDate > lastFiscalStart ? joinDate : lastFiscalStart;
-            const lastWorkDays = Math.floor((lastFiscalEnd - lastWorkStart) / msPerDay) + 1;
-            const safeDays = Math.max(0, Math.min(lastWorkDays, 365));
-            base = Math.ceil(15 * safeDays / 365);
-            bonus = 0;
-            label = `2년차 (전년 근무 ${safeDays}일 비례)`;
-        } else {
-            // 3년차 이상: 기본 15일 + 가산 (3년차에 1일 추가, 이후 2년마다 1일씩)
-            base = 15;
-            // yearsOfService=2(만 2년 = 3년차 시작)일 때 +1
-            // yearsOfService=4(만 4년 = 5년차)일 때 +2 ...
-            // 공식: bonus = Math.floor((yearsOfService - 2) / 2) + 1
-            bonus = Math.floor((yearsOfService - 2) / 2) + 1;
-            // 법정 최대: 기본+가산 ≤ 25일
-            if(base + bonus > 25) bonus = 25 - base;
-            if(bonus < 0) bonus = 0;
-            label = `${yearsOfService + 1}년차 (근속 ${yearsOfService}년)`;
+        if(hireDate instanceof Date) {
+            if(isNaN(hireDate.getTime())) return null;
+            return new Date(hireDate.getFullYear(), hireDate.getMonth(), hireDate.getDate());
         }
 
-        return {
-            base, bonus, total: base + bonus,
-            yearsOfService, label
-        };
+        let raw = String(hireDate).trim();
+        if(!raw) return null;
+
+        if(/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+            const parts = raw.split('-').map(Number);
+            const parsed = new Date(parts[0], parts[1] - 1, parts[2]);
+            if(parsed.getFullYear() === parts[0] && parsed.getMonth() === parts[1] - 1 && parsed.getDate() === parts[2]) return parsed;
+            return null;
+        }
+
+        if(/^\d{4}[./]\d{1,2}[./]\d{1,2}$/.test(raw)) {
+            const parts = raw.replace(/\./g, '/').split('/').map(Number);
+            const parsed = new Date(parts[0], parts[1] - 1, parts[2]);
+            if(parsed.getFullYear() === parts[0] && parsed.getMonth() === parts[1] - 1 && parsed.getDate() === parts[2]) return parsed;
+            return null;
+        }
+
+        const digits = raw.replace(/[^0-9]/g, '');
+        if(digits.length === 8) {
+            const y = Number(digits.substring(0, 4));
+            const m = Number(digits.substring(4, 6));
+            const d = Number(digits.substring(6, 8));
+            const parsed = new Date(y, m - 1, d);
+            if(parsed.getFullYear() === y && parsed.getMonth() === m - 1 && parsed.getDate() === d) return parsed;
+            return null;
+        }
+
+        const parsed = new Date(raw);
+        if(isNaN(parsed.getTime())) return null;
+        return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+    }
+
+    function formatDateForInput(hireDate) {
+        const parsed = parseHireDateSafely(hireDate);
+        if(!parsed) return '';
+        const y = parsed.getFullYear();
+        const m = String(parsed.getMonth() + 1).padStart(2, '0');
+        const d = String(parsed.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    function getMemberJoinDate(memberInfo) {
+        if(!memberInfo || typeof memberInfo !== 'object') return '';
+        return memberInfo.joinDate || memberInfo.hireDate || memberInfo.hire_date || memberInfo.startDate || memberInfo.start_date || '';
+    }
+
+    // ============================================================
+    // 💡 V1.4.0: 연차 자동 계산 핵심 함수 (회계연도 = 매년 1월 1일 기준) 💡
+    // ============================================================
+    // [입력] hireDate: 'YYYY-MM-DD' 또는 날짜로 해석 가능한 값, targetYear: 계산 기준 연도
+    // [출력] { base: 기본일수, bonus: 가산일수, total: 총합, yearsOfService: 근속년수, label: 설명, isValid: 정상 여부 }
+    //
+    // 규칙:
+    //  · 입사일이 없거나 형식이 이상하면 0일 반환하여 관리자 리스트 렌더링 중단 방지
+    //  · 1년차 미만(입사 후 1년 X): 1개월 개근 시 1일씩 (최대 11일)
+    //  · 2년차(입사 후 1년~2년): Math.ceil(15 * 전년근무일수 / 365)
+    //  · 3년차+ (입사 후 2년 이상): 기본 15일 + 3년차 1일 추가, 이후 매 2년마다 1일 추가, 최대 25일
+    function calculateAnnualLeave(hireDate, targetYear = new Date().getFullYear()) {
+        try {
+            const joinDate = parseHireDateSafely(hireDate);
+            if(!joinDate) return emptyLeaveCalc('입사일 미입력');
+
+            const today = new Date();
+            const safeTargetYear = Number.isFinite(Number(targetYear)) ? Number(targetYear) : today.getFullYear();
+            const targetDate = safeTargetYear === today.getFullYear()
+                ? new Date(today.getFullYear(), today.getMonth(), today.getDate())
+                : new Date(safeTargetYear, 11, 31);
+
+            if(joinDate > targetDate) return emptyLeaveCalc('입사 예정');
+
+            const msPerDay = 1000 * 60 * 60 * 24;
+            const daysSinceJoin = Math.max(0, Math.floor((targetDate - joinDate) / msPerDay));
+            const yearsOfService = Math.floor(daysSinceJoin / 365);
+
+            const lastFiscalStart = new Date(safeTargetYear - 1, 0, 1);
+            const lastFiscalEnd = new Date(safeTargetYear - 1, 11, 31);
+
+            let base = 0;
+            let bonus = 0;
+            let label = '';
+
+            if(yearsOfService < 1) {
+                let monthsCompleted = (targetDate.getFullYear() - joinDate.getFullYear()) * 12 + (targetDate.getMonth() - joinDate.getMonth());
+                if(targetDate.getDate() < joinDate.getDate()) monthsCompleted -= 1;
+                if(monthsCompleted < 0) monthsCompleted = 0;
+
+                base = Math.min(monthsCompleted, 11);
+                bonus = 0;
+                label = `1년차 미만 (${monthsCompleted}개월 개근)`;
+            } else if(yearsOfService < 2) {
+                const lastWorkStart = joinDate > lastFiscalStart ? joinDate : lastFiscalStart;
+                const lastWorkDays = Math.floor((lastFiscalEnd - lastWorkStart) / msPerDay) + 1;
+                const safeDays = Math.max(0, Math.min(lastWorkDays, 365));
+
+                base = Math.ceil(15 * safeDays / 365);
+                bonus = 0;
+                label = `2년차 (전년 근무 ${safeDays}일 비례)`;
+            } else {
+                base = 15;
+                bonus = Math.floor((yearsOfService - 2) / 2) + 1;
+
+                if(base + bonus > 25) bonus = 25 - base;
+                if(bonus < 0) bonus = 0;
+
+                label = `${yearsOfService + 1}년차 (근속 ${yearsOfService}년)`;
+            }
+
+            return {
+                base: base,
+                bonus: bonus,
+                total: base + bonus,
+                yearsOfService: yearsOfService,
+                label: label,
+                isValid: true
+            };
+        } catch(error) {
+            console.error('연차 계산 오류:', error, hireDate, targetYear);
+            return emptyLeaveCalc('계산 오류');
+        }
     }
 
     // ============================================================
     // 💡 V1.4.0: 연차 데이터 로드 + 관리자 패널 + 잔여 현황판 (자동 계산) 💡
     // ============================================================
     function loadLeaveData(teamData) {
-        teamMembersInfo = teamData.membersInfo || {};
+        const safeTeamData = teamData && typeof teamData === 'object' ? teamData : {};
+        const members = Array.isArray(safeTeamData.members) ? safeTeamData.members.filter(Boolean) : [];
+        const targetYearEl = document.getElementById('calYear');
+        const targetYear = targetYearEl && targetYearEl.value ? Number(targetYearEl.value) : new Date().getFullYear();
 
-        // ----- 관리자 패널: 입사일만 받고 기본/가산은 자동 표시 -----
-        if(myRole === "owner" || myRole === "admin") {
-            document.getElementById('leaveAdminPanel').style.display = 'block';
-            document.getElementById('leaveAdminBody').innerHTML = (teamData.members||[]).map(mEmail => {
-                let nick = globalEmailToNick[mEmail] || mEmail.split('@')[0];
-                let info = teamMembersInfo[mEmail] || { joinDate: '' };
-                let calc = calculateAnnualLeave(info.joinDate || '');
+        teamMembersInfo = safeTeamData.membersInfo && typeof safeTeamData.membersInfo === 'object'
+            ? safeTeamData.membersInfo
+            : {};
 
-                return `<tr data-email="${mEmail}">
-                    <td class="fw-bold">${nick}</td>
-                    <td>
-                        <input type="date" class="form-control input-dark leave-join" data-email="${mEmail}"
-                               value="${info.joinDate||''}"
-                               onchange="recalcLeavePreview('${mEmail}')">
-                    </td>
-                    <td class="text-info fw-bold leave-calc-base">${calc.base}</td>
-                    <td class="text-warning fw-bold leave-calc-bonus">${calc.bonus}</td>
-                    <td class="text-success fw-bold leave-calc-total">${calc.total} 일</td>
-                </tr>`;
-            }).join('');
+        const adminPanel = document.getElementById('leaveAdminPanel');
+        const adminBody = document.getElementById('leaveAdminBody');
+        const statusBody = document.getElementById('leaveStatusBody');
+
+        if(!statusBody) {
+            console.error('leaveStatusBody 컨테이너를 찾을 수 없습니다.');
+            return;
         }
 
-        // ----- 연차 사용 기록 로드 + 잔여 현황판 -----
-        db.collection("leave_records").where("teamId","==",myTeamId).onSnapshot(ss => {
-            let used = {}; globalLeaveRecords = [];
+        if(myRole === "owner" || myRole === "admin") {
+            if(adminPanel) adminPanel.style.display = 'block';
+
+            if(adminBody) {
+                const adminRows = [];
+
+                members.forEach(mEmail => {
+                    try {
+                        const email = String(mEmail || '').trim();
+                        if(!email) return;
+
+                        const nick = globalEmailToNick[email] || email.split('@')[0] || '이름 없음';
+                        const info = teamMembersInfo[email] && typeof teamMembersInfo[email] === 'object' ? teamMembersInfo[email] : {};
+                        const joinDateRaw = getMemberJoinDate(info);
+                        const joinDateValue = formatDateForInput(joinDateRaw);
+                        const calc = calculateAnnualLeave(joinDateRaw, targetYear);
+
+                        adminRows.push(`<tr data-email="${escapeLeaveHtml(email)}">
+                            <td class="fw-bold">${escapeLeaveHtml(nick)}</td>
+                            <td>
+                                <input type="date" class="form-control input-dark leave-join" data-email="${escapeLeaveHtml(email)}"
+                                       value="${escapeLeaveHtml(joinDateValue)}"
+                                       onchange="recalcLeavePreview('${escapeLeaveJs(email)}')">
+                            </td>
+                            <td class="text-info fw-bold leave-calc-base">${calc.base}</td>
+                            <td class="text-warning fw-bold leave-calc-bonus">${calc.bonus}</td>
+                            <td class="text-success fw-bold leave-calc-total">${calc.total} 일</td>
+                        </tr>`);
+                    } catch(error) {
+                        console.error('관리자 연차 행 렌더링 오류:', error, mEmail);
+                        const email = String(mEmail || '').trim();
+                        const nick = globalEmailToNick[email] || email.split('@')[0] || '알 수 없음';
+
+                        adminRows.push(`<tr class="table-danger">
+                            <td class="fw-bold">${escapeLeaveHtml(nick)}</td>
+                            <td colspan="4" class="text-danger small text-start">
+                                이 직원의 입사일 데이터에 오류가 있어 기본값 0일로 표시했습니다.
+                            </td>
+                        </tr>`);
+                    }
+                });
+
+                adminBody.innerHTML = adminRows.join('') || `<tr>
+                    <td colspan="5" class="text-secondary py-4">등록된 팀원이 없습니다.</td>
+                </tr>`;
+            } else {
+                console.error('leaveAdminBody 컨테이너를 찾을 수 없습니다.');
+            }
+        }
+
+        db.collection("leave_records").where("teamId", "==", myTeamId).onSnapshot(ss => {
+            const used = {};
+            globalLeaveRecords = [];
+
             ss.docs.forEach(doc => {
-                let d = doc.data(); d.id = doc.id;
-                // 승인된 연차만 사용 일수에 합산
-                if(d.approved) { used[d.userEmail] = (used[d.userEmail] || 0) + parseFloat(d.amount); }
-                globalLeaveRecords.push(d);
+                try {
+                    const d = doc.data() || {};
+                    d.id = doc.id;
+
+                    const email = String(d.userEmail || '').trim();
+                    const amount = Number(d.amount || 0);
+
+                    if(d.approved && email) used[email] = (used[email] || 0) + amount;
+                    globalLeaveRecords.push(d);
+                } catch(error) {
+                    console.error('연차 사용 기록 파싱 오류:', error, doc.id);
+                }
             });
 
-            // 잔여 현황판: 자동 계산된 값 사용
-            document.getElementById('leaveStatusBody').innerHTML = (teamData.members||[]).map(mEmail => {
-                let nick = globalEmailToNick[mEmail] || mEmail.split('@')[0];
-                let info = teamMembersInfo[mEmail] || { joinDate: '' };
-                let calc = calculateAnnualLeave(info.joinDate || '');
+            const statusRows = [];
 
-                let usedAmt = used[mEmail] || 0;
-                let remainAmt = calc.total - usedAmt;
-                let displayDate = info.joinDate || '-';
+            members.forEach(mEmail => {
+                try {
+                    const email = String(mEmail || '').trim();
+                    if(!email) return;
 
-                // 입사일 미입력 시 안내 행
-                if(!info.joinDate) {
-                    return `<tr>
-                        <td class="fw-bold fs-6">${nick}</td>
-                        <td class="text-secondary">미입력</td>
-                        <td colspan="3" class="text-secondary small">관리자 패널에서 입사일을 등록해주세요</td>
-                    </tr>`;
+                    const nick = globalEmailToNick[email] || email.split('@')[0] || '이름 없음';
+                    const info = teamMembersInfo[email] && typeof teamMembersInfo[email] === 'object' ? teamMembersInfo[email] : {};
+                    const joinDateRaw = getMemberJoinDate(info);
+                    const displayDate = formatDateForInput(joinDateRaw) || '-';
+                    const calc = calculateAnnualLeave(joinDateRaw, targetYear);
+
+                    const usedAmt = Number(used[email] || 0);
+                    const remainAmt = calc.total - usedAmt;
+
+                    if(!formatDateForInput(joinDateRaw)) {
+                        statusRows.push(`<tr>
+                            <td class="fw-bold fs-6">${escapeLeaveHtml(nick)}</td>
+                            <td class="text-secondary">미입력</td>
+                            <td colspan="3" class="text-secondary small">관리자 패널에서 입사일을 등록해주세요</td>
+                        </tr>`);
+                        return;
+                    }
+
+                    statusRows.push(`<tr>
+                        <td class="fw-bold fs-6">${escapeLeaveHtml(nick)}</td>
+                        <td class="text-secondary">${escapeLeaveHtml(displayDate)}<br><span class="small">${escapeLeaveHtml(calc.label)}</span></td>
+                        <td class="text-info">${calc.total} <span class="small text-secondary">(기본 ${calc.base} + 가산 ${calc.bonus})</span></td>
+                        <td class="text-danger fw-bold">${usedAmt} 일</td>
+                        <td class="${remainAmt < 0 ? 'text-danger' : 'text-success'} fw-bold fs-5">${remainAmt} 일</td>
+                    </tr>`);
+                } catch(error) {
+                    console.error('잔여 연차 행 렌더링 오류:', error, mEmail);
+                    const email = String(mEmail || '').trim();
+                    const nick = globalEmailToNick[email] || email.split('@')[0] || '알 수 없음';
+
+                    statusRows.push(`<tr class="table-danger">
+                        <td class="fw-bold fs-6">${escapeLeaveHtml(nick)}</td>
+                        <td colspan="4" class="text-danger small text-start">
+                            이 직원의 연차 데이터를 표시하는 중 오류가 발생했습니다. 다른 직원 목록은 계속 표시됩니다.
+                        </td>
+                    </tr>`);
                 }
+            });
 
-                return `<tr>
-                    <td class="fw-bold fs-6">${nick}</td>
-                    <td class="text-secondary">${displayDate}<br><span class="small">${calc.label}</span></td>
-                    <td class="text-info">${calc.total} <span class="small text-secondary">(기본 ${calc.base} + 가산 ${calc.bonus})</span></td>
-                    <td class="text-danger fw-bold">${usedAmt} 일</td>
-                    <td class="${remainAmt < 0 ? 'text-danger' : 'text-success'} fw-bold fs-5">${remainAmt} 일</td>
-                </tr>`;
-            }).join('');
+            statusBody.innerHTML = statusRows.join('') || `<tr>
+                <td colspan="5" class="text-secondary py-4">등록된 팀원이 없습니다.</td>
+            </tr>`;
 
-            renderLeaveCalendar();
+            try {
+                renderLeaveCalendar();
+            } catch(error) {
+                console.error('연차 달력 렌더링 오류:', error);
+            }
+        }, error => {
+            console.error('연차 기록 구독 오류:', error);
+            statusBody.innerHTML = `<tr>
+                <td colspan="5" class="text-danger py-4">연차 기록을 불러오는 중 오류가 발생했습니다.</td>
+            </tr>`;
         });
+    }
+
+    function loadTeamMembersLeave(teamData) {
+        return loadLeaveData(teamData);
     }
 
     // 💡 V1.4.0: 관리자 패널에서 입사일 변경 시 즉시 미리보기 갱신 💡
     function recalcLeavePreview(mEmail) {
-        const row = document.querySelector(`#leaveAdminBody tr[data-email="${mEmail}"]`);
-        if(!row) return;
-        const dateInput = row.querySelector('.leave-join');
-        const newDate = dateInput ? dateInput.value : '';
-        const calc = calculateAnnualLeave(newDate);
-        const baseCell = row.querySelector('.leave-calc-base');
-        const bonusCell = row.querySelector('.leave-calc-bonus');
-        const totalCell = row.querySelector('.leave-calc-total');
-        if(baseCell) baseCell.innerText = calc.base;
-        if(bonusCell) bonusCell.innerText = calc.bonus;
-        if(totalCell) totalCell.innerText = calc.total + ' 일';
+        try {
+            const email = String(mEmail || '').trim();
+            const safeEmail = window.CSS && CSS.escape ? CSS.escape(email) : email.replace(/"/g, '\\"');
+            const row = document.querySelector(`#leaveAdminBody tr[data-email="${safeEmail}"]`);
+            if(!row) return;
+
+            const dateInput = row.querySelector('.leave-join');
+            const newDate = dateInput ? dateInput.value : '';
+            const targetYearEl = document.getElementById('calYear');
+            const targetYear = targetYearEl && targetYearEl.value ? Number(targetYearEl.value) : new Date().getFullYear();
+            const calc = calculateAnnualLeave(newDate, targetYear);
+
+            const baseCell = row.querySelector('.leave-calc-base');
+            const bonusCell = row.querySelector('.leave-calc-bonus');
+            const totalCell = row.querySelector('.leave-calc-total');
+
+            if(baseCell) baseCell.innerText = calc.base;
+            if(bonusCell) bonusCell.innerText = calc.bonus;
+            if(totalCell) totalCell.innerText = calc.total + ' 일';
+        } catch(error) {
+            console.error('연차 미리보기 갱신 오류:', error, mEmail);
+        }
     }
 
     // 💡 연차 전용 달력 렌더링 💡
