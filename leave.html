@@ -12,7 +12,7 @@
 
     <title>김목수이야기 - 연차 관리</title>
     <!-- ============================================
-         📋 김목수이야기 - 연차 관리: V1.4.0
+         📋 김목수이야기 - 연차 관리: V1.4.1
          📅 마지막 업데이트: 회계연도 기준 자동 계산 시스템 도입
          📝 변경: 입사일만 입력 → 기본/가산 연차 자동 산출
          ============================================ -->
@@ -24,6 +24,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
     <script src="firebase-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
     <style>
         :root { --bg-deep: #131722; --sidebar-bg: #1e222d; --card-bg: #2a2e39; --primary-accent: #5c7cfa; --success-btn: #0ca678; --danger-btn: #e03131; }
@@ -331,7 +332,7 @@
     }
 
     // ============================================================
-    // 💡 V1.4.0: 연차 자동 계산 핵심 함수 (회계연도 = 매년 1월 1일 기준) 💡
+    // 💡 V1.4.1: 연차 자동 계산 핵심 함수 (회계연도 = 매년 1월 1일 기준) 💡
     // ============================================================
     // [입력] joinDateStr: 'YYYY-MM-DD' 형식
     // [출력] { base: 기본일수, bonus: 가산일수, total: 총합, yearsOfService: 근속년수, label: 설명 }
@@ -424,7 +425,7 @@
     }
 
     // ============================================================
-    // 💡 V1.4.0: 연차 자동 계산 핵심 함수 (회계연도 = 매년 1월 1일 기준) 💡
+    // 💡 V1.4.1: 연차 자동 계산 핵심 함수 (회계연도 = 매년 1월 1일 기준) 💡
     // ============================================================
     // [입력] hireDate: 'YYYY-MM-DD' 또는 날짜로 해석 가능한 값, targetYear: 계산 기준 연도
     // [출력] { base: 기본일수, bonus: 가산일수, total: 총합, yearsOfService: 근속년수, label: 설명, isValid: 정상 여부 }
@@ -499,7 +500,7 @@
     }
 
     // ============================================================
-    // 💡 V1.4.0: 연차 데이터 로드 + 관리자 패널 + 잔여 현황판 (자동 계산) 💡
+    // 💡 V1.4.1: 연차 데이터 로드 + 관리자 패널 + 잔여 현황판 (자동 계산) 💡
     // ============================================================
     function loadLeaveData(teamData) {
         const safeTeamData = teamData && typeof teamData === 'object' ? teamData : {};
@@ -565,6 +566,7 @@
                 adminBody.innerHTML = adminRows.join('') || `<tr>
                     <td colspan="5" class="text-secondary py-4">등록된 팀원이 없습니다.</td>
                 </tr>`;
+                bindLeaveAdminEvents();
             } else {
                 console.error('leaveAdminBody 컨테이너를 찾을 수 없습니다.');
             }
@@ -656,7 +658,28 @@
         return loadLeaveData(teamData);
     }
 
-    // 💡 V1.4.0: 관리자 패널에서 입사일 변경 시 즉시 미리보기 갱신 💡
+    // 💡 V1.4.1: 관리자 패널 입력/저장 이벤트 안전 바인딩 💡
+    function bindLeaveAdminEvents() {
+        const adminBody = document.getElementById('leaveAdminBody');
+        if(!adminBody || adminBody.dataset.bound === 'true') return;
+
+        adminBody.dataset.bound = 'true';
+        adminBody.addEventListener('change', (event) => {
+            const target = event.target;
+            if(target && target.classList && target.classList.contains('leave-join')) {
+                recalcLeavePreview(target.getAttribute('data-email'));
+            }
+        });
+
+        adminBody.addEventListener('input', (event) => {
+            const target = event.target;
+            if(target && target.classList && target.classList.contains('leave-join')) {
+                recalcLeavePreview(target.getAttribute('data-email'));
+            }
+        });
+    }
+
+    // 💡 V1.4.1: 관리자 패널에서 입사일 변경 시 즉시 미리보기 갱신 💡
     function recalcLeavePreview(mEmail) {
         try {
             const email = String(mEmail || '').trim();
@@ -828,24 +851,52 @@
         alert("휴가 신청이 완료되었습니다. 관리자 승인을 기다려주세요.");
     }
     
-    // 💡 V1.4.0: 저장은 입사일만 (기본/가산은 매 로드 시 자동 계산) 💡
+    // 💡 V1.4.1: 저장은 입사일만 (기본/가산은 매 로드 시 자동 계산) 💡
     async function saveLeaveSettings() {
-        // 기존 membersInfo를 보존하면서 joinDate만 갱신 (다른 데이터 안전)
-        const tDoc = await db.collection("teams").doc(myTeamId).get();
-        let existingInfo = (tDoc.data() && tDoc.data().membersInfo) || {};
+        if(!myTeamId) {
+            alert("팀 정보를 먼저 불러온 뒤 저장할 수 있습니다.");
+            return;
+        }
 
-        document.querySelectorAll('.leave-join').forEach(el => {
-            let email = el.getAttribute('data-email');
-            if(!existingInfo[email]) existingInfo[email] = {};
-            existingInfo[email].joinDate = el.value || '';
-        });
+        const saveBtn = document.querySelector('button[onclick="saveLeaveSettings()"]');
+        const originalText = saveBtn ? saveBtn.innerHTML : '';
 
-        await db.collection("teams").doc(myTeamId).update({ membersInfo: existingInfo });
-        alert("입사일이 저장되었습니다.\n잠시 후 자동 계산된 연차가 반영됩니다.");
+        try {
+            if(saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>저장 중';
+            }
+
+            const tDoc = await db.collection("teams").doc(myTeamId).get();
+            const teamData = tDoc.exists ? tDoc.data() : {};
+            const existingInfo = (teamData && teamData.membersInfo && typeof teamData.membersInfo === 'object') ? { ...teamData.membersInfo } : {};
+
+            document.querySelectorAll('.leave-join').forEach(el => {
+                const email = String(el.getAttribute('data-email') || '').trim();
+                if(!email) return;
+                if(!existingInfo[email] || typeof existingInfo[email] !== 'object') existingInfo[email] = {};
+                existingInfo[email].joinDate = el.value || '';
+            });
+
+            await db.collection("teams").doc(myTeamId).update({ membersInfo: existingInfo });
+            teamMembersInfo = existingInfo;
+
+            alert("입사일이 저장되었습니다.\n자동 계산된 연차가 화면에 반영됩니다.");
+
+            const refreshedDoc = await db.collection("teams").doc(myTeamId).get();
+            if(refreshedDoc.exists) {
+                loadTeamMembersLeave(refreshedDoc.data());
+            }
+        } catch(error) {
+            console.error('연차 설정 저장 오류:', error);
+            alert("연차 정보를 저장하는 중 오류가 발생했습니다.\n" + (error.message || error));
+        } finally {
+            if(saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalText || '입사일 저장';
+            }
+        }
     }
 </script>
 </body>
 </html>
-
-
-
