@@ -1,3 +1,6 @@
+    let siteEditingId = null;
+    let globalStatusData = [];
+
 let isStatusEditMode = false;
 
 function toggleStatusEditMode() {
