@@ -57,11 +57,15 @@ document.addEventListener("DOMContentLoaded", function () {
         updateThemeUI(false);
     }
 
+    if (typeof renderAllTeams === "function") {
     resetWorklogForm();
+}
 
     const logMonth = document.getElementById("logMonth");
     if (logMonth) {
-        logMonth.onchange = renderAllTeams;
+        logMonth.onchange = function () {
+    if (typeof renderAllTeams === "function") renderAllTeams();
+};
         logMonth.value = new Date().toISOString().substring(0, 7);
     }
 });
