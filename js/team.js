@@ -27,26 +27,48 @@
     async function regenerateInviteCode() { if(confirm("기존 코드는 즉시 무효화됩니다. 계속하시겠습니까?")) { const c = Math.random().toString(36).substring(2, 8).toUpperCase(); await db.collection("teams").doc(myTeamId).update({ inviteCode: c }); document.getElementById('displayTeamId').value = c; alert("발급되었습니다!"); } }
     async function kickMember(tEmail) { if(confirm("팀에서 내보내시겠습니까?")) { const tDoc = await db.collection("teams").doc(myTeamId).get(); let m = tDoc.data().members.filter(x => x !== tEmail); let a = (tDoc.data().admins || []).filter(x => x !== tEmail); await db.collection("teams").doc(myTeamId).update({ members: m, admins: a }); loadTeamMembers(); alert("팀원이 삭제되었습니다."); } }
     async function toggleAdmin(tEmail, isPro) { const tDoc = await db.collection("teams").doc(myTeamId).get(); let a = tDoc.data().admins || []; if(isPro) { if(!a.includes(tEmail)) a.push(tEmail); } else { a = a.filter(x => x !== tEmail); } await db.collection("teams").doc(myTeamId).update({ admins: a }); loadTeamMembers(); }
-    async function openPermModal(type) {
-        currentPermType = type;
-        document.getElementById('permModalTitle').innerText = type === 'notice' ? '공지사항 담당자 설정' : '종합 상황판 담당자 설정';
-        const tDoc = await db.collection("teams").doc(myTeamId).get();
-        const members = tDoc.data().members || [];
-        let activeList = type === 'notice' ? globalNoticeAdmins : globalStatusAdmins;
-        
-        document.getElementById('permMemberList').innerHTML = members.map(m => {
-            let nick = globalEmailToNick[m] || m;
-            let checked = activeList.includes(m) ? 'checked' : '';
-            return `<label class="d-flex align-items-center gap-2 p-3 rounded perm-item-box cursor-pointer"><input type="checkbox" class="form-check-input perm-check" value="${m}" ${checked} style="width:20px; height:20px;"> <span class="fw-bold">${nick} <small class="text-secondary fw-normal">(${m})</small></span></label>`;
-        }).join('');
-        permModalInst.show();
+async function openPermModal(type) {
+    currentPermType = type;
+
+    let title = '종합 상황판 담당자 설정';
+    let activeList = globalStatusAdmins;
+
+    if (type === 'notice') {
+        title = '공지사항 담당자 설정';
+        activeList = globalNoticeAdmins;
+    } else if (type === 'worklog') {
+        title = '작업일보 완료 담당자 설정';
+        activeList = globalWorklogAdmins;
     }
+
+    document.getElementById('permModalTitle').innerText = title;
+
+    const tDoc = await db.collection("teams").doc(myTeamId).get();
+    const members = tDoc.data().members || [];
+    
+    document.getElementById('permMemberList').innerHTML = members.map(m => {
+        let nick = globalEmailToNick[m] || m;
+        let checked = activeList.includes(m) ? 'checked' : '';
+        return `<label class="d-flex align-items-center gap-2 p-3 rounded perm-item-box cursor-pointer"><input type="checkbox" class="form-check-input perm-check" value="${m}" ${checked} style="width:20px; height:20px;"> <span class="fw-bold">${nick} <small class="text-secondary fw-normal">(${m})</small></span></label>`;
+    }).join('');
+
+    permModalInst.show();
+}
 
     async function savePerms() {
         let selected = [];
         document.querySelectorAll('.perm-check:checked').forEach(cb => selected.push(cb.value));
+        
         let updateData = {};
-        if(currentPermType === 'notice') updateData.noticeAdmins = selected; else updateData.statusAdmins = selected;
+        
+        if (currentPermType === 'notice') {
+            updateData.noticeAdmins = selected;
+        } else if (currentPermType === 'worklog') {
+            updateData.worklogAdmins = selected;
+        } else {
+            updateData.statusAdmins = selected;
+        }
+        
         await db.collection("teams").doc(myTeamId).update(updateData);
         permModalInst.hide();
         alert("담당자 권한이 성공적으로 저장되었습니다.\n(새로고침 시 권한이 반영됩니다.)");
