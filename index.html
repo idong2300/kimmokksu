@@ -416,7 +416,7 @@
             <div class="nav-link" onclick="showPage('worklog', this)"><i class="bi bi-journal-text"></i> 작업일보</div>
             <div class="nav-link" onclick="showPage('punch', this)"><i class="bi bi-ui-checks"></i> 펀치리스트</div>
             <div class="nav-link" onclick="showPage('t5', this)"><i class="bi bi-calculator"></i> T5 계산기</div>
-            <div class="nav-link" onclick="location.href='leave.html'" style="justify-content:space-between;"><span><i class="bi bi-calendar2-check"></i> 연차 관리</span><i class="bi bi-box-arrow-up-right" style="font-size:0.75rem; opacity:0.5;"></i></div>
+            <div class="nav-link" onclick="showPage('leave', this)"><i class="bi bi-calendar2-check"></i> 연차 관리</div>
             <div class="nav-link" onclick="showPage('memo', this)"><i class="bi bi-stickies"></i> 메모장</div>
             <div class="nav-link" onclick="showPage('profile', this)"><i class="bi bi-person-gear"></i> 내 정보 수정</div>
         </div>
@@ -506,13 +506,13 @@
                         <h6 class="fw-bold m-0">펀치리스트</h6>
                     </div>
                 </div>
-                <div class="col mobile-col-6" onclick="location.href='leave.html'">
+                <div class="col mobile-col-6" onclick="showPage('leave', document.querySelectorAll('.nav-link')[8])">
                     <div class="t5-card compact-card h-100 cursor-pointer text-center">
                         <i class="bi bi-calendar2-check fs-1 d-block mb-3" style="color: #9b59b6;"></i>
                         <h6 class="fw-bold m-0">연차 관리</h6>
                     </div>
                 </div>
-                <div class="col mobile-col-6" onclick="showPage('memo', document.querySelectorAll('.nav-link')[8])">
+                <div class="col mobile-col-6" onclick="showPage('memo', document.querySelectorAll('.nav-link')[9])">
                     <div class="t5-card compact-card h-100 cursor-pointer text-center">
                         <i class="bi bi-stickies fs-1 d-block mb-3" style="color: #e67e22;"></i>
                         <h6 class="fw-bold m-0">메모장</h6>
@@ -688,6 +688,75 @@
             </div>
             
             <div id="history-list" class="row g-3"></div>
+        </section>
+
+        <section id="page-leave" class="page-section">
+            <h3 class="fw-bold mb-4 text-white"><i class="bi bi-calendar2-check me-2" style="color:#9b59b6;"></i>김목수 이야기 연차 현황</h3>
+            
+            <div class="t5-card p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center border-bottom border-secondary border-opacity-25 pb-3 mb-3">
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <h5 class="fw-bold text-white m-0"><i class="bi bi-calendar-month me-2 text-primary"></i>휴가 달력</h5>
+                        <div class="d-flex gap-2">
+                            <select id="calYear" class="form-select form-select-sm input-dark fw-bold" style="width:auto; min-width:90px;" onchange="renderLeaveCalendar()"></select>
+                            <select id="calMonth" class="form-select form-select-sm input-dark fw-bold" style="width:auto; min-width:80px;" onchange="renderLeaveCalendar()"></select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="leaveCalendar" class="text-center mb-2" style="font-size:0.85rem;"></div>
+                
+                <div id="calAccordionArea" style="display:none;">
+                    <div class="cal-accordion-content" id="calAccordionContent"></div>
+                </div>
+                
+                <div class="mt-5 border-top border-secondary border-opacity-25 pt-4">
+                    <h5 class="fw-bold text-info mb-3"><i class="bi bi-list-check me-2"></i>이번 달 신청 내역</h5>
+                    <div class="monthly-list-box" id="monthlyLeaveList"></div>
+                </div>
+            </div>
+            
+            <div class="t5-card border border-warning border-opacity-50" id="leaveAdminPanel" style="display:none;">
+                <div class="d-flex justify-content-between align-items-center cursor-pointer" data-bs-toggle="collapse" data-bs-target="#leaveAdminCollapse">
+                    <h5 class="fw-bold text-warning m-0"><i class="bi bi-gear me-2"></i>[관리자용] 연차 정보 관리</h5>
+                    <i class="bi bi-chevron-down text-warning fs-5"></i>
+                </div>
+                <div class="collapse mt-4" id="leaveAdminCollapse">
+                    <p class="small text-secondary mb-3">
+                        <i class="bi bi-info-circle me-1"></i>
+                        <b>회계연도(매년 1월 1일) 기준</b>으로 자동 계산됩니다. 입사일만 정확히 입력해 주세요.<br>
+                        <span class="text-warning small">· 1년차 미만: 매월 개근 1일씩 (최대 11일) · 2년차: 전년 근무일 비례 · 3년차+: 15일 + 근속 가산 (최대 25일)</span>
+                    </p>
+                    <div class="table-responsive">
+                        <table class="table table-dark align-middle text-center mb-0">
+                            <thead class="text-secondary">
+                                <tr><th>팀원 이름</th><th>입사일</th><th>기본 (자동)</th><th>가산 (자동)</th><th>총 부여</th></tr>
+                            </thead>
+                            <tbody id="leaveAdminBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="text-end mt-4">
+                        <button class="btn btn-warning fw-bold px-4" onclick="saveLeaveSettings()">입사일 저장</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="t5-card border border-success border-opacity-25">
+                <div class="d-flex justify-content-between align-items-center cursor-pointer" data-bs-toggle="collapse" data-bs-target="#leaveStatusCollapse">
+                    <h5 class="fw-bold m-0 text-success"><i class="bi bi-person-check me-2"></i>남은 연차 현황</h5>
+                    <i class="bi bi-chevron-down text-success fs-5"></i>
+                </div>
+                <div class="collapse show mt-4" id="leaveStatusCollapse">
+                    <div class="table-responsive">
+                        <table class="table table-dark align-middle text-center mb-0 fs-6">
+                            <thead class="text-secondary">
+                                <tr><th>이름</th><th>입사일</th><th>총 부여 (기본+가산)</th><th>사용 일수</th><th>남은 연차</th></tr>
+                            </thead>
+                            <tbody id="leaveStatusBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <section id="page-punch" class="page-section">
@@ -962,6 +1031,34 @@
         </div>
     </div>
 </div>
+
+<div class="modal-backdrop-custom" id="leaveApplyModal">
+    <div class="modal-box">
+        <h5 class="fw-bold mb-4 text-white">휴가 신청</h5>
+        <div class="row g-3">
+            <div class="col-12">
+                <label class="small text-secondary mb-1">선택된 날짜</label>
+                <input type="text" id="applyLeaveDate" class="form-control input-dark fw-bold text-primary" readonly>
+            </div>
+            <div class="col-12">
+                <label class="small text-secondary mb-1">종류 선택</label>
+                <select id="applyLeaveType" class="form-select input-dark fw-bold">
+                    <option value="1">종일 연차 (1일)</option>
+                    <option value="0.5_am">오전 반차 (0.5일)</option>
+                    <option value="0.5_pm">오후 반차 (0.5일)</option>
+                </select>
+            </div>
+            <div class="col-12">
+                <label class="small text-secondary mb-1">사유 입력 (선택)</label>
+                <input type="text" id="applyLeaveReason" class="form-control input-dark" placeholder="예: 개인사정, 병원 방문 등">
+            </div>
+        </div>
+        <div class="d-flex gap-2 mt-4">
+            <button class="btn btn-secondary w-50 py-2 fw-bold" onclick="document.getElementById('leaveApplyModal').style.display='none'">취소</button>
+            <button class="btn btn-success w-50 py-2 fw-bold" onclick="submitLeaveRequest()">신청하기</button>
+        </div>
+    </div>
+</div>    
 
 <div class="modal fade" id="permModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
