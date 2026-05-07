@@ -661,10 +661,13 @@
             <div id="saved-gantt-list" class="row g-3"></div>
         </section>
 
-        <section id="page-worklog" class="page-section">
+       <section id="page-worklog" class="page-section">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h3 class="fw-bold m-0">실전 작업일보</h3>
-                <button onclick="addTeam()" class="t5-btn-small">+ 공정 추가</button>
+                <div class="d-flex gap-2">
+                    <button class="t5-btn-small" id="btnWorklogPerm" style="display:none;" onclick="openPermModal('worklog')">담당자 설정</button>
+                    <button onclick="addTeam()" class="t5-btn-small">+ 공정 추가</button>
+                </div>
             </div>
             <div class="row g-2 mb-4">
                 <div class="col-md-4"><input type="month" id="logMonth" class="form-control input-dark"></div>
@@ -672,7 +675,15 @@
             </div>
             <div id="team-container"></div>
             <button class="t5-btn-primary mt-4 mb-5" onclick="saveMonthlyLog()">현장 데이터 최종 저장 💾</button>
+           
             <h5 class="fw-bold mt-5 mb-3"><i class="bi bi-archive me-2"></i>최근 저장 기록</h5>
+            
+            <div class="d-flex gap-2 mb-3 overflow-auto pb-1">
+                <button class="btn btn-sm btn-primary worklog-filter-btn" onclick="switchWorklogFilter('mine', this)">내 파일</button>
+                <button class="btn btn-sm btn-outline-secondary worklog-filter-btn" onclick="switchWorklogFilter('all', this)">전체 파일</button>
+                <button class="btn btn-sm btn-outline-success worklog-filter-btn" onclick="switchWorklogFilter('done', this)">완료된 파일</button>
+            </div>
+            
             <div id="history-list" class="row g-3"></div>
         </section>
 
