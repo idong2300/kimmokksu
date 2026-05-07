@@ -222,10 +222,13 @@
     
             let btnHtml = `
                 <button class="t5-btn-small bg-secondary text-white" onclick="editLog('${d.id}')">수정</button>
-                <button class="t5-btn-small bg-primary text-white" onclick="copyLog('${d.id}')">복사</button>
-                <button class="t5-btn-small bg-success text-white" onclick="exportToExcel('${d.id}')">엑셀</button>
-                ${completeBtnHtml}
-                ${delBtnHtml}
+                <button class="t5-btn-small bg-dark text-white" onclick="toggleWorklogCardActions('${d.id}')">편집</button>
+                <div id="worklog-actions-${d.id}" class="d-none d-flex gap-1 flex-wrap justify-content-end">
+                    <button class="t5-btn-small bg-primary text-white" onclick="copyLog('${d.id}')">복사</button>
+                    <button class="t5-btn-small bg-success text-white" onclick="exportToExcel('${d.id}')">엑셀</button>
+                    ${completeBtnHtml}
+                    ${delBtnHtml}
+                </div>
             `;
     
             return `
@@ -248,7 +251,12 @@
             `;
         }).join('');
     }
-                                                                                                                                                                                                                           
+
+    function toggleWorklogCardActions(id) {
+        const el = document.getElementById(`worklog-actions-${id}`);
+        if (!el) return;
+        el.classList.toggle('d-none');
+    }
 
     async function editLog(id) { const d = (await db.collection("monthly_logs").doc(id).get()).data(); editingId = id; document.getElementById('logMonth').value = d.month; document.getElementById('siteName').value = d.site; teamData = d.teamData || []; showPage('worklog', null, true, { preserveState: true }); renderAllTeams(); window.scrollTo(0,0); }
     async function copyLog(id) { const d = (await db.collection("monthly_logs").doc(id).get()).data(); editingId = null; document.getElementById('logMonth').value = d.month; document.getElementById('siteName').value = d.site + " (복사)"; teamData = d.teamData || []; showPage('worklog', null, true, { preserveState: true }); renderAllTeams(); alert("데이터가 복사되었습니다."); window.scrollTo(0,0); }
@@ -317,5 +325,6 @@ window.exportToExcel = exportToExcel;
 window.canCompleteWorklog = canCompleteWorklog;
 window.switchWorklogFilter = switchWorklogFilter;
 window.renderWorklogHistory = renderWorklogHistory;
+window.toggleWorklogCardActions = toggleWorklogCardActions;
 window.completeWorklog = completeWorklog;
 window.reopenWorklog = reopenWorklog;
