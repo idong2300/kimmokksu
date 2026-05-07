@@ -11,6 +11,7 @@ let siteModal, ganttModal, permModalInst;
 
 let globalNoticeAdmins = [];
 let globalStatusAdmins = [];
+let globalWorklogAdmins = [];
 let currentPermType = "";
 
 let worklogCollapsedStates = {};
@@ -58,14 +59,14 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     if (typeof renderAllTeams === "function") {
-    resetWorklogForm();
-}
+        resetWorklogForm();
+    }
 
     const logMonth = document.getElementById("logMonth");
     if (logMonth) {
         logMonth.onchange = function () {
-    if (typeof renderAllTeams === "function") renderAllTeams();
-};
+            if (typeof renderAllTeams === "function") renderAllTeams();
+        };
         logMonth.value = new Date().toISOString().substring(0, 7);
     }
 });
@@ -281,6 +282,10 @@ function applyRoleRestrictions() {
 
     document.getElementById("btnNoticePerm").style.display = isSuper ? "inline-block" : "none";
     document.getElementById("btnStatusPerm").style.display = isSuper ? "inline-block" : "none";
+
+    const btnWorklogPerm = document.getElementById("btnWorklogPerm");
+    if (btnWorklogPerm) btnWorklogPerm.style.display = isSuper ? "inline-block" : "none";
+    
     document.getElementById("btnEditStatus").style.display = canUseEditMode ? "inline-block" : "none";
     document.getElementById("btnDeleteGantt").style.display = isSuper ? "inline-block" : "none";
 
