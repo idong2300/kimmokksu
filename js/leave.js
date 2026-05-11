@@ -688,3 +688,16 @@ if (window.LEAVE_STANDALONE) {
             }
         }
     }
+window.initLeaveCalendarSelects = initLeaveCalendarSelects;
+window.loadLeaveData = loadLeaveData;
+window.loadTeamMembersLeave = loadTeamMembersLeave;
+window.renderLeaveCalendar = renderLeaveCalendar;
+window.renderMonthlyLeaveList = renderMonthlyLeaveList;
+window.toggleCalAccordion = toggleCalAccordion;
+window.openLeaveModal = openLeaveModal;
+window.submitLeaveRequest = submitLeaveRequest;
+window.toggleLeaveApprove = toggleLeaveApprove;
+window.deleteLeaveRecord = deleteLeaveRecord;
+window.saveLeaveSettings = saveLeaveSettings;
+window.recalcLeavePreview = recalcLeavePreview;
+window.calculateAnnualLeave = calculateAnnualLeave;
