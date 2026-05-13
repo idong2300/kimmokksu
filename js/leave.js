@@ -835,25 +835,25 @@ if (window.LEAVE_STANDALONE) {
                 position: [335, 318],
                 duty: [755, 318],
             
-                startYear: [330, 414],
-                startMonth: [425, 414],
-                startDay: [500, 414],
-                endYear: [615, 414],
-                endMonth: [710, 414],
-                endDay: [790, 414],
+                startYear: [346, 425],
+                startMonth: [446, 425],
+                startDay: [520, 425],
+                endYear: [635, 425],
+                endMonth: [731, 425],
+                endDay: [807, 425],
             
-                requestDays: [335, 483],
-                remainDays: [335, 548],
+                requestDays: [332, 493],
+                remainDays: [332, 558],
             
                 reason: [88, 710],
                 substitute: [220, 1115],
                 emergencyPhone: [220, 1180],
             
-                statementYear: [334, 1288],
-                applyYear: [432, 1360],
-                applyMonth: [525, 1360],
-                applyDay: [598, 1360],
-                applicant: [870, 1438]
+                statementYear: [352, 1292],
+                applyYear: [447, 1368],
+                applyMonth: [545, 1368],
+                applyDay: [620, 1368],
+                applicant: [850, 1450]
             };
     
             drawCenteredText(ctx, applicantName, ...P.name, { size: 18 });
