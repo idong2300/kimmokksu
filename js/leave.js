@@ -550,6 +550,9 @@ if (window.LEAVE_STANDALONE) {
             let isOwnerOrAdmin = (myRole === 'owner' || myRole === 'admin');
             let canDelete = r.approved ? isOwnerOrAdmin : (isOwnerOrAdmin || r.userEmail === myEmail);
             let rowClass = r.approved ? 'approved-row' : '';
+            let canPrint = r.approved && (isOwnerOrAdmin || r.userEmail === myEmail);
+            let printBtn = canPrint ? `<button class="btn btn-outline-primary px-3 py-1 fw-bold" onclick="printLeaveForm('${r.id}')"><i class="bi bi-printer me-1"></i>출력</button>` : '';
+            
 
             return `<div class="leave-detail-item ${rowClass}">
                         <div class="d-flex flex-column">
@@ -561,6 +564,7 @@ if (window.LEAVE_STANDALONE) {
                                 <input type="checkbox" class="form-check-input m-0" style="width:20px; height:20px;" ${r.approved?'checked':''} ${isOwnerOrAdmin?'':'disabled'} onchange="toggleLeaveApprove('${r.id}', ${r.approved||false})">
                                 ${r.approved ? '<span class="text-success fw-bold">승인 완료</span>' : '<span class="text-warning fw-bold">결재 대기</span>'}
                             </label>
+                            ${printBtn}
                             ${canDelete ? `<button class="btn btn-outline-danger px-3 py-1 fw-bold" onclick="deleteLeaveRecord('${r.id}', '${r.userEmail}', ${r.approved||false})">취소/삭제</button>` : ''}
                         </div>
                     </div>`;
@@ -581,6 +585,8 @@ if (window.LEAVE_STANDALONE) {
             let isOwnerOrAdmin = (myRole === 'owner' || myRole === 'admin');
             let canDelete = r.approved ? isOwnerOrAdmin : (isOwnerOrAdmin || r.userEmail === myEmail);
             let rowClass = r.approved ? 'approved-row' : '';
+            let canPrint = r.approved && (isOwnerOrAdmin || r.userEmail === myEmail);
+            let printBtn = canPrint ? `<button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="printLeaveForm('${r.id}')"><i class="bi bi-printer"></i></button>` : '';
             return `<div class="leave-detail-item ${rowClass}">
                         <div class="fw-bold text-white">${nick} <span class="badge bg-secondary ms-2">${txt}</span> ${r.reason ? `<span class="small text-secondary ms-2">(${r.reason})</span>` : ''}</div>
                         <div class="d-flex align-items-center gap-3">
@@ -588,6 +594,7 @@ if (window.LEAVE_STANDALONE) {
                                 <input type="checkbox" class="form-check-input m-0" ${r.approved?'checked':''} ${isOwnerOrAdmin?'':'disabled'} onchange="toggleLeaveApprove('${r.id}', ${r.approved||false})">
                                 ${r.approved ? '<span class="text-success fw-bold">승인 완료</span>' : '<span class="text-warning">대기중</span>'}
                             </label>
+                            ${printBtn}
                             ${canDelete ? `<button class="btn btn-sm btn-outline-danger py-0 px-2" onclick="deleteLeaveRecord('${r.id}', '${r.userEmail}', ${r.approved||false})"><i class="bi bi-trash"></i></button>` : ''}
                         </div>
                     </div>`;
@@ -601,8 +608,25 @@ if (window.LEAVE_STANDALONE) {
     }
 
     async function toggleLeaveApprove(id, current) {
-        if(myRole !== 'owner' && myRole !== 'admin') return alert("관리자만 승인할 수 있습니다.");
-        await db.collection("leave_records").doc(id).update({ approved: !current });
+        if (myRole !== 'owner' && myRole !== 'admin') {
+            return alert("관리자만 승인할 수 있습니다.");
+        }
+    
+        const nextApproved = !current;
+    
+        const updateData = {
+            approved: nextApproved
+        };
+    
+        if (nextApproved) {
+            updateData.approvedAt = Date.now();
+            updateData.approvedBy = myEmail;
+        } else {
+            updateData.approvedAt = null;
+            updateData.approvedBy = null;
+        }
+    
+        await db.collection("leave_records").doc(id).update(updateData);
     }
     
     async function deleteLeaveRecord(id, email, approved) {
@@ -641,7 +665,249 @@ if (window.LEAVE_STANDALONE) {
         document.getElementById('calAccordionArea').style.display = 'none';
         alert("휴가 신청이 완료되었습니다. 관리자 승인을 기다려주세요.");
     }
+
+    function formatKoreanDateParts(dateStr) {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) {
+            const now = new Date();
+            return {
+                year: now.getFullYear(),
+                yy: String(now.getFullYear()).slice(2),
+                month: now.getMonth() + 1,
+                day: now.getDate()
+            };
+        }
     
+        return {
+            year: d.getFullYear(),
+            yy: String(d.getFullYear()).slice(2),
+            month: d.getMonth() + 1,
+            day: d.getDate()
+        };
+    }
+    
+    function getLeaveTypeText(record) {
+        if (!record) return "";
+        if (Number(record.amount) === 1) return "종일 연차";
+        if (record.type === "am") return "오전 반차";
+        if (record.type === "pm") return "오후 반차";
+        return "반차";
+    }
+    
+    function getLeaveUsedDaysByEmail(email) {
+        return globalLeaveRecords
+            .filter(r => r.approved && r.userEmail === email)
+            .reduce((sum, r) => sum + Number(r.amount || 0), 0);
+    }
+    
+    function getLeaveRemainDays(email, record) {
+        const targetYearEl = document.getElementById('calYear');
+        const targetYear = targetYearEl && targetYearEl.value ? Number(targetYearEl.value) : new Date().getFullYear();
+    
+        const info = teamMembersInfo[email] && typeof teamMembersInfo[email] === 'object'
+            ? teamMembersInfo[email]
+            : {};
+    
+        const joinDateRaw = getMemberJoinDate(info);
+        const calc = calculateAnnualLeave(joinDateRaw, targetYear);
+    
+        const usedDays = getLeaveUsedDaysByEmail(email);
+        const currentAmount = Number(record && record.amount ? record.amount : 0);
+    
+        // 이미 승인된 기록이므로 usedDays에 현재 신청 건도 포함되어 있음.
+        // 신청서의 잔여일수는 해당 연차 사용 후 잔여 기준으로 표시.
+        return calc.total - usedDays;
+    }
+    
+    function loadLeaveTemplateImage() {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = "annual_leave_template.png";
+        });
+    }
+    
+    function drawCenteredText(ctx, textValue, x, y, options = {}) {
+        const size = options.size || 30;
+        const weight = options.weight || "600";
+        const color = options.color || "#1f2937";
+        const align = options.align || "center";
+    
+        ctx.save();
+        ctx.font = `${weight} ${size}px Pretendard, NanumGothic, Malgun Gothic, sans-serif`;
+        ctx.fillStyle = color;
+        ctx.textAlign = align;
+        ctx.textBaseline = "middle";
+        ctx.fillText(String(textValue ?? ""), x, y);
+        ctx.restore();
+    }
+    
+    function drawWrappedText(ctx, textValue, x, y, maxWidth, lineHeight, options = {}) {
+        const size = options.size || 30;
+        const weight = options.weight || "500";
+        const color = options.color || "#1f2937";
+    
+        ctx.save();
+        ctx.font = `${weight} ${size}px Pretendard, NanumGothic, Malgun Gothic, sans-serif`;
+        ctx.fillStyle = color;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "top";
+    
+        const raw = String(textValue || "");
+        const lines = [];
+    
+        raw.split("\n").forEach(paragraph => {
+            let line = "";
+            for (const ch of paragraph) {
+                const testLine = line + ch;
+                if (ctx.measureText(testLine).width > maxWidth && line) {
+                    lines.push(line);
+                    line = ch;
+                } else {
+                    line = testLine;
+                }
+            }
+            if (line) lines.push(line);
+        });
+    
+        lines.slice(0, 9).forEach((line, idx) => {
+            ctx.fillText(line, x, y + idx * lineHeight);
+        });
+    
+        ctx.restore();
+    }
+    
+    async function printLeaveForm(recordId) {
+        const record = globalLeaveRecords.find(r => r.id === recordId);
+    
+        if (!record) {
+            return alert("출력할 연차 기록을 찾을 수 없습니다.");
+        }
+    
+        if (!record.approved) {
+            return alert("승인 완료된 연차만 출력할 수 있습니다.");
+        }
+    
+        const isOwnerOrAdmin = myRole === "owner" || myRole === "admin";
+    
+        if (!isOwnerOrAdmin && record.userEmail !== myEmail) {
+            return alert("본인의 승인 완료 연차만 출력할 수 있습니다.");
+        }
+    
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+            return alert("PDF 라이브러리를 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.");
+        }
+    
+        try {
+            const template = await loadLeaveTemplateImage();
+    
+            const canvas = document.createElement("canvas");
+            canvas.width = template.naturalWidth || template.width;
+            canvas.height = template.naturalHeight || template.height;
+    
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(template, 0, 0, canvas.width, canvas.height);
+    
+            const email = record.userEmail;
+            const info = teamMembersInfo[email] && typeof teamMembersInfo[email] === 'object'
+                ? teamMembersInfo[email]
+                : {};
+    
+            const applicantName = globalEmailToNick[email] || email.split("@")[0] || "";
+            const department = info.department || info.dept || "";
+            const position = info.position || info.rank || "";
+            const duty = info.task || info.job || info.work || "";
+            const substitute = record.substitute || info.substitute || "";
+            const emergencyPhone = record.emergencyPhone || info.phone || info.contact || "";
+            const reason = record.reason || "";
+    
+            const leaveDate = formatKoreanDateParts(record.date);
+            const applyDate = formatKoreanDateParts(record.createdAt ? new Date(record.createdAt).toISOString().slice(0, 10) : record.date);
+            const leaveDays = Number(record.amount || 0);
+            const remainDays = getLeaveRemainDays(email, record);
+            const leaveTypeText = getLeaveTypeText(record);
+    
+            // 템플릿 기준 좌표. 실제 출력 결과 보고 5~20px씩 조정 가능.
+            const P = {
+                name: [340, 338],
+                department: [780, 338],
+                position: [340, 430],
+                duty: [780, 430],
+    
+                startYear: [385, 555],
+                startMonth: [500, 555],
+                startDay: [575, 555],
+                endYear: [720, 555],
+                endMonth: [835, 555],
+                endDay: [910, 555],
+    
+                requestDays: [445, 650],
+                remainDays: [445, 745],
+    
+                reason: [120, 890],
+                substitute: [300, 1260],
+                emergencyPhone: [300, 1345],
+    
+                statementYear: [380, 1450],
+                applyYear: [505, 1550],
+                applyMonth: [610, 1550],
+                applyDay: [700, 1550],
+                applicant: [940, 1645]
+            };
+    
+            drawCenteredText(ctx, applicantName, ...P.name, { size: 30 });
+            drawCenteredText(ctx, department, ...P.department, { size: 30 });
+            drawCenteredText(ctx, position, ...P.position, { size: 30 });
+            drawCenteredText(ctx, duty, ...P.duty, { size: 30 });
+    
+            drawCenteredText(ctx, leaveDate.yy, ...P.startYear, { size: 28 });
+            drawCenteredText(ctx, leaveDate.month, ...P.startMonth, { size: 28 });
+            drawCenteredText(ctx, leaveDate.day, ...P.startDay, { size: 28 });
+            drawCenteredText(ctx, leaveDate.yy, ...P.endYear, { size: 28 });
+            drawCenteredText(ctx, leaveDate.month, ...P.endMonth, { size: 28 });
+            drawCenteredText(ctx, leaveDate.day, ...P.endDay, { size: 28 });
+    
+            drawCenteredText(ctx, leaveDays, ...P.requestDays, { size: 30 });
+            drawCenteredText(ctx, remainDays, ...P.remainDays, { size: 30 });
+    
+            const reasonText = leaveTypeText
+                ? `${leaveTypeText}${reason ? " / " + reason : ""}`
+                : reason;
+    
+            drawWrappedText(ctx, reasonText, P.reason[0], P.reason[1], 900, 42, { size: 30 });
+            drawCenteredText(ctx, substitute, ...P.substitute, { size: 28, align: "left" });
+            drawCenteredText(ctx, emergencyPhone, ...P.emergencyPhone, { size: 28, align: "left" });
+    
+            drawCenteredText(ctx, leaveDate.yy, ...P.statementYear, { size: 28 });
+    
+            drawCenteredText(ctx, applyDate.yy, ...P.applyYear, { size: 28 });
+            drawCenteredText(ctx, applyDate.month, ...P.applyMonth, { size: 28 });
+            drawCenteredText(ctx, applyDate.day, ...P.applyDay, { size: 28 });
+    
+            drawCenteredText(ctx, applicantName, ...P.applicant, { size: 28 });
+    
+            const imgData = canvas.toDataURL("image/png");
+            const { jsPDF } = window.jspdf;
+    
+            const pdf = new jsPDF({
+                orientation: "portrait",
+                unit: "px",
+                format: [canvas.width, canvas.height]
+            });
+    
+            pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
+    
+            const safeName = applicantName.replace(/[\\/:*?"<>|]/g, "_");
+            const fileName = `연차휴가신청서_${safeName}_${record.date}.pdf`;
+    
+            pdf.save(fileName);
+        } catch (error) {
+            console.error("연차신청서 PDF 생성 오류:", error);
+            alert("PDF 생성 중 오류가 발생했습니다. 콘솔을 확인해주세요.");
+        }
+    }
+
     // 💡 V1.4.1: 저장은 입사일만 (기본/가산은 매 로드 시 자동 계산) 💡
     async function saveLeaveSettings() {
         if(!myTeamId) {
@@ -701,3 +967,4 @@ window.deleteLeaveRecord = deleteLeaveRecord;
 window.saveLeaveSettings = saveLeaveSettings;
 window.recalcLeavePreview = recalcLeavePreview;
 window.calculateAnnualLeave = calculateAnnualLeave;
+window.printLeaveForm = printLeaveForm;
