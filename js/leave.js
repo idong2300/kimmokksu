@@ -854,7 +854,7 @@ if (window.LEAVE_STANDALONE) {
             drawCenteredText(ctx, duty, ...P.duty, { size: 18 });
     
             const leavePeriodText = `${leaveDate.year}년 ${leaveDate.month}월 ${leaveDate.day}일 ~ ${leaveDate.year}년 ${leaveDate.month}월 ${leaveDate.day}일`;
-            drawCenteredText(ctx, leavePeriodText, ...P.leavePeriod, { size: 20 });
+            drawCenteredText(ctx, leavePeriodText, ...P.leavePeriod, { size: 20, align: "left" });
             
             drawCenteredText(ctx, `${leaveDays}일`, ...P.requestDays, { size: 18 });
             drawCenteredText(ctx, `${remainDays}일`, ...P.remainDays, { size: 18 });
