@@ -830,30 +830,22 @@ if (window.LEAVE_STANDALONE) {
     
             // 템플릿 기준 좌표. 실제 출력 결과 보고 5~20px씩 조정 가능.
             const P = {
-                name: [335, 240],
-                department: [755, 240],
-                position: [335, 305],
-                duty: [755, 305],
+                name: [445, 255],
+                department: [845, 255],
+                position: [445, 340],
+                duty: [845, 340],
             
-                startYear: [360, 426],
-                startMonth: [418, 426],
-                startDay: [472, 426],
-                endYear: [560, 426],
-                endMonth: [620, 426],
-                endDay: [675, 426],
+                leavePeriod: [585, 462],
+                requestDays: [445, 545],
+                remainDays: [445, 630],
             
-                requestDays: [348, 492],
-                remainDays: [348, 558],
+                reason: [95, 790],
+                substitute: [255, 1198],
+                emergencyPhone: [255, 1262],
             
-                reason: [88, 710],
-                substitute: [220, 1115],
-                emergencyPhone: [220, 1180],
-            
-                statementYear: [358, 1284],
-                applyYear: [452, 1357],
-                applyMonth: [525, 1357],
-                applyDay: [585, 1357],
-                applicant: [875, 1415]
+                statement: [543, 1322],
+                applyDate: [543, 1378],
+                applicant: [870, 1415]
             };
     
             drawCenteredText(ctx, applicantName, ...P.name, { size: 18 });
@@ -861,31 +853,28 @@ if (window.LEAVE_STANDALONE) {
             drawCenteredText(ctx, position, ...P.position, { size: 18 });
             drawCenteredText(ctx, duty, ...P.duty, { size: 18 });
     
-            drawCenteredText(ctx, leaveDate.yy, ...P.startYear, { size: 17 });
-            drawCenteredText(ctx, leaveDate.month, ...P.startMonth, { size: 17 });
-            drawCenteredText(ctx, leaveDate.day, ...P.startDay, { size: 17 });
-            drawCenteredText(ctx, leaveDate.yy, ...P.endYear, { size: 17 });
-            drawCenteredText(ctx, leaveDate.month, ...P.endMonth, { size: 17 });
-            drawCenteredText(ctx, leaveDate.day, ...P.endDay, { size: 17 });
+            const leavePeriodText = `${leaveDate.year}년 ${leaveDate.month}월 ${leaveDate.day}일 ~ ${leaveDate.year}년 ${leaveDate.month}월 ${leaveDate.day}일`;
+            drawCenteredText(ctx, leavePeriodText, ...P.leavePeriod, { size: 20 });
             
-            drawCenteredText(ctx, leaveDays, ...P.requestDays, { size: 18 });
-            drawCenteredText(ctx, remainDays, ...P.remainDays, { size: 18 });    
+            drawCenteredText(ctx, `${leaveDays}일`, ...P.requestDays, { size: 18 });
+            drawCenteredText(ctx, `${remainDays}일`, ...P.remainDays, { size: 18 });
     
             const reasonText = leaveTypeText
                 ? `${leaveTypeText}${reason ? " / " + reason : ""}`
                 : reason;
     
-            drawWrappedText(ctx, reasonText, P.reason[0], P.reason[1], 820, 34, { size: 21 });
+            drawWrappedText(ctx, reasonText, P.reason[0], P.reason[1], 900, 30, { size: 20 });
+            
             drawCenteredText(ctx, substitute, ...P.substitute, { size: 18, align: "left" });
             drawCenteredText(ctx, emergencyPhone, ...P.emergencyPhone, { size: 18, align: "left" });
             
-            drawCenteredText(ctx, leaveDate.yy, ...P.statementYear, { size: 18 });
+            const statementText = `상기 본인은 위와 같이 ${leaveDate.year}년도 연차유급 휴가를 신청하오니 처리하여 주시기 바랍니다.`;
+            drawCenteredText(ctx, statementText, ...P.statement, { size: 18 });
             
-            drawCenteredText(ctx, applyDate.yy, ...P.applyYear, { size: 18 });
-            drawCenteredText(ctx, applyDate.month, ...P.applyMonth, { size: 18 });
-            drawCenteredText(ctx, applyDate.day, ...P.applyDay, { size: 18 });
+            const applyDateText = `${applyDate.year}년 ${applyDate.month}월 ${applyDate.day}일`;
+            drawCenteredText(ctx, applyDateText, ...P.applyDate, { size: 18 });
             
-            drawCenteredText(ctx, applicantName, ...P.applicant, { size: 18 });
+            drawCenteredText(ctx, `신청인  ${applicantName}  (인)`, ...P.applicant, { size: 18 });
     
             const imgData = canvas.toDataURL("image/png");
             const { jsPDF } = window.jspdf;
