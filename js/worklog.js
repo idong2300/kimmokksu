@@ -171,27 +171,43 @@
             const workers = Array.isArray(team.workers) ? team.workers : [];
             const teamTotal = summary.teamTotals[tIdx] ? summary.teamTotals[tIdx].total : 0;
     
-            const workerRows = workers.length
-                ? workers.map((worker, wIdx) => {
-                    const workerName = worker.name || '';
-                    const days = worker.days && typeof worker.days === 'object' ? worker.days : {};
-                    const value = days[selectedWorklogDay] || '';
-    
-                    return `
-                        <div class="d-flex align-items-center gap-2 py-2 border-bottom border-secondary border-opacity-10">
+        const workerRows = workers.length
+            ? `<div class="row g-2">` + workers.map((worker, wIdx) => {
+                const workerName = worker.name || '';
+                const days = worker.days && typeof worker.days === 'object' ? worker.days : {};
+                const value = days[selectedWorklogDay] || '';
+        
+                return `
+                    <div class="col-12 col-md-6">
+                        <div class="d-flex align-items-center gap-2 p-2 rounded border border-secondary border-opacity-10 bg-dark bg-opacity-25">
                             <div class="flex-grow-1" style="min-width:0;">
-                                <input type="text" class="form-control input-dark fw-bold" value="${workerName}" placeholder="작업자 이름" onchange="teamData[${tIdx}].workers[${wIdx}].name=this.value">
+                                <input type="text"
+                                       class="form-control input-dark fw-bold"
+                                       value="${workerName}"
+                                       placeholder="작업자 이름"
+                                       onchange="teamData[${tIdx}].workers[${wIdx}].name=this.value">
                             </div>
-                            <div style="width:110px;">
-                                <input type="number" step="0.5" min="0" class="form-control input-dark text-center fw-bold" value="${value}" placeholder="공수" oninput="updateDailyWorkerValue(${tIdx}, ${wIdx}, this.value)">
+        
+                            <div style="width:90px;">
+                                <input type="number"
+                                       step="0.5"
+                                       min="0"
+                                       class="form-control input-dark text-center fw-bold"
+                                       value="${value}"
+                                       placeholder="공수"
+                                       oninput="updateDailyWorkerValue(${tIdx}, ${wIdx}, this.value)">
                             </div>
-                            <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" onclick="removeWorker(${tIdx}, ${wIdx}); worklogInputMode='daily'; renderAllTeams();">
+        
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-danger flex-shrink-0"
+                                    onclick="removeWorker(${tIdx}, ${wIdx}); worklogInputMode='daily'; renderAllTeams();">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </div>
-                    `;
-                }).join('')
-                : `<div class="text-secondary small py-3 text-center">등록된 작업자가 없습니다.</div>`;
+                    </div>
+                `;
+            }).join('') + `</div>`
+            : `<div class="text-secondary small py-3 text-center">등록된 작업자가 없습니다.</div>`;
     
             return `
                 <div class="t5-card p-3 mb-3">
