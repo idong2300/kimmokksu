@@ -31,6 +31,7 @@ auth.onAuthStateChanged(async user => {
             globalNoticeAdmins = tData.noticeAdmins || [];
             globalStatusAdmins = tData.statusAdmins || [];
             globalWorklogAdmins = tData.worklogAdmins || [];
+            globalLeaveAdmins = tData.leaveAdmins || [];
 
             applyRoleRestrictions();
 
