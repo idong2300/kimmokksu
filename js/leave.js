@@ -797,9 +797,9 @@ if (window.LEAVE_STANDALONE) {
             return alert("승인 완료된 연차만 출력할 수 있습니다.");
         }
     
-        const isOwnerOrAdmin = myRole === "owner" || myRole === "admin";
-    
-        if (!isOwnerOrAdmin && record.userEmail !== myEmail) {
+        const canManage = canManageLeave();
+        
+        if (!canManage && record.userEmail !== myEmail) {
             return alert("본인의 승인 완료 연차만 출력할 수 있습니다.");
         }
     
