@@ -23,25 +23,64 @@
         }).join('');
     }
     async function joinTeam() { const c = document.getElementById('joinTeamId').value.trim().toUpperCase(); if(!c) return; try { const q = await db.collection("teams").where("inviteCode", "==", c).get(); if(q.empty) return alert("유효하지 않은 코드입니다."); const tid = q.docs[0].id; let m = q.docs[0].data().members || []; if(!m.includes(myEmail)) { m.push(myEmail); await db.collection("teams").doc(tid).update({ members: m }); alert("팀 합류 성공!"); location.reload(); } else { alert("이미 소속된 팀입니다."); } } catch(e) { alert(e.message); } }
-    async function createTeam() { if(confirm("개설하시겠습니까?")) { const c = Math.random().toString(36).substring(2, 8).toUpperCase(); await db.collection("teams").add({ createdAt: Date.now(), members: [myEmail], owner: myEmail, admins: [], inviteCode: c }); alert("팀이 성공적으로 개설되었습니다!"); location.reload(); } }
+    async function createTeam() { if(confirm("개설하시겠습니까?")) { const c = Math.random().toString(36).substring(2, 8).toUpperCase(); 
+                                                            await db.collection("teams").add({
+    createdAt: Date.now(),
+    members: [myEmail],
+    owner: myEmail,
+    admins: [],
+    noticeAdmins: [],
+    statusAdmins: [],
+    worklogAdmins: [],
+    leaveAdmins: [],
+    inviteCode: c
+});
+                                                            alert("팀이 성공적으로 개설되었습니다!"); location.reload(); } }
     async function regenerateInviteCode() { if(confirm("기존 코드는 즉시 무효화됩니다. 계속하시겠습니까?")) { const c = Math.random().toString(36).substring(2, 8).toUpperCase(); await db.collection("teams").doc(myTeamId).update({ inviteCode: c }); document.getElementById('displayTeamId').value = c; alert("발급되었습니다!"); } }
-    async function kickMember(tEmail) { if(confirm("팀에서 내보내시겠습니까?")) { const tDoc = await db.collection("teams").doc(myTeamId).get(); let m = tDoc.data().members.filter(x => x !== tEmail); let a = (tDoc.data().admins || []).filter(x => x !== tEmail); await db.collection("teams").doc(myTeamId).update({ members: m, admins: a }); loadTeamMembers(); alert("팀원이 삭제되었습니다."); } }
-    async function toggleAdmin(tEmail, isPro) { const tDoc = await db.collection("teams").doc(myTeamId).get(); let a = tDoc.data().admins || []; if(isPro) { if(!a.includes(tEmail)) a.push(tEmail); } else { a = a.filter(x => x !== tEmail); } await db.collection("teams").doc(myTeamId).update({ admins: a }); loadTeamMembers(); }
-async function openPermModal(type) {
-    currentPermType = type;
-
-    let title = '종합 상황판 담당자 설정';
-    let activeList = globalStatusAdmins;
-
-    if (type === 'notice') {
-        title = '공지사항 담당자 설정';
-        activeList = globalNoticeAdmins;
-    } else if (type === 'worklog') {
-        title = '작업일보 완료 담당자 설정';
-        activeList = globalWorklogAdmins;
+    async function kickMember(tEmail) {
+        if(confirm("팀에서 내보내시겠습니까?")) {
+            const tDoc = await db.collection("teams").doc(myTeamId).get();
+            const data = tDoc.data();
+    
+            let m = (data.members || []).filter(x => x !== tEmail);
+            let a = (data.admins || []).filter(x => x !== tEmail);
+            let noticeA = (data.noticeAdmins || []).filter(x => x !== tEmail);
+            let statusA = (data.statusAdmins || []).filter(x => x !== tEmail);
+            let worklogA = (data.worklogAdmins || []).filter(x => x !== tEmail);
+            let leaveA = (data.leaveAdmins || []).filter(x => x !== tEmail);
+    
+            await db.collection("teams").doc(myTeamId).update({
+                members: m,
+                admins: a,
+                noticeAdmins: noticeA,
+                statusAdmins: statusA,
+                worklogAdmins: worklogA,
+                leaveAdmins: leaveA
+            });
+    
+            loadTeamMembers();
+            alert("팀원이 삭제되었습니다.");
+        }
     }
-
-    document.getElementById('permModalTitle').innerText = title;
+    async function toggleAdmin(tEmail, isPro) { const tDoc = await db.collection("teams").doc(myTeamId).get(); let a = tDoc.data().admins || []; if(isPro) { if(!a.includes(tEmail)) a.push(tEmail); } else { a = a.filter(x => x !== tEmail); } await db.collection("teams").doc(myTeamId).update({ admins: a }); loadTeamMembers(); }
+    async function openPermModal(type) {
+        currentPermType = type;
+    
+        let title = '종합 상황판 담당자 설정';
+        let activeList = globalStatusAdmins;
+    
+        if (type === 'notice') {
+            title = '공지사항 담당자 설정';
+            activeList = globalNoticeAdmins;
+        } else if (type === 'worklog') {
+            title = '작업일보 완료 담당자 설정';
+            activeList = globalWorklogAdmins;
+        } else if (type === 'leave') {
+            title = '연차관리 담당자 설정';
+            activeList = globalLeaveAdmins;
+        }
+    
+        document.getElementById('permModalTitle').innerText = title;
 
     const tDoc = await db.collection("teams").doc(myTeamId).get();
     const members = tDoc.data().members || [];
@@ -65,6 +104,8 @@ async function openPermModal(type) {
             updateData.noticeAdmins = selected;
         } else if (currentPermType === 'worklog') {
             updateData.worklogAdmins = selected;
+        } else if (currentPermType === 'leave') {
+            updateData.leaveAdmins = selected;
         } else {
             updateData.statusAdmins = selected;
         }
