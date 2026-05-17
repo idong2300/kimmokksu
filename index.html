@@ -705,7 +705,17 @@
         </section>
 
         <section id="page-leave" class="page-section">
-            <h3 class="fw-bold mb-4 text-white"><i class="bi bi-calendar2-check me-2" style="color:#9b59b6;"></i>김목수 이야기 연차 현황</h3>
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                <h3 class="fw-bold m-0 text-white">
+                    <i class="bi bi-calendar2-check me-2" style="color:#9b59b6;"></i>김목수 이야기 연차 현황
+                </h3>
+                <button class="btn btn-outline-info fw-bold px-3"
+                        id="btnLeavePerm"
+                        style="display:none;"
+                        onclick="openPermModal('leave')">
+                    <i class="bi bi-person-gear"></i> 연차 담당자 설정
+                </button>
+            </div>
             
             <div class="t5-card p-4 mb-4">
                 <div class="d-flex justify-content-between align-items-center border-bottom border-secondary border-opacity-25 pb-3 mb-3">
