@@ -1,121 +1,308 @@
-    // 팀 관리
-    function checkTeamUI() {
-        if(myTeamId) { document.getElementById('no-team-section').style.display = 'none'; document.getElementById('has-team-section').style.display = 'block'; loadTeamMembers(); } 
-        else { document.getElementById('no-team-section').style.display = 'block'; document.getElementById('has-team-section').style.display = 'none'; }
+// =====================================================
+// 김목수이야기 ERP - team.js
+// 역할: 팀 관리, 초대코드, 팀원 권한, 담당자 설정
+// =====================================================
+
+function checkTeamUI() {
+    const noTeamSection = document.getElementById('no-team-section');
+    const hasTeamSection = document.getElementById('has-team-section');
+
+    if (!noTeamSection || !hasTeamSection) return;
+
+    if (myTeamId) {
+        noTeamSection.style.display = 'none';
+        hasTeamSection.style.display = 'block';
+        loadTeamMembers();
+    } else {
+        noTeamSection.style.display = 'block';
+        hasTeamSection.style.display = 'none';
     }
-    async function loadTeamMembers() {
-        if(!myTeamId) return; const tDoc = await db.collection("teams").doc(myTeamId).get(); const tData = tDoc.data(); const members = tData.members || [];
-        if(myRole === "owner" || myRole === "admin") document.getElementById('btnRegenCode').style.display = 'inline-block'; else document.getElementById('btnRegenCode').style.display = 'none';
-        document.getElementById('displayTeamId').value = tData.inviteCode || '발급필요';
-        document.getElementById('member-list').innerHTML = members.map(m => {
-            let nick = globalEmailToNick[m] || m.split('@')[0]; let badge = "", actionBtn = "";
-            let isOwner = (tData.owner === m || m === "idong2300@naver.com"); let isAdmin = (tData.admins && tData.admins.includes(m));
-            if(isOwner) badge = `<span class="badge bg-warning text-dark">에디터</span>`;
-            else if(isAdmin) {
-                badge = `<span class="badge bg-primary">관리자</span>`;
-                if(myRole === "owner") actionBtn = `<button class="btn btn-sm btn-outline-secondary py-0 me-2" onclick="toggleAdmin('${m}', false)">관리자 해제</button><button class="btn btn-sm btn-outline-danger py-0" onclick="kickMember('${m}')">삭제</button>`;
-            } else {
-                badge = `<span class="badge bg-secondary">팀원</span>`;
-                if(myRole === "owner") actionBtn = `<button class="btn btn-sm btn-outline-info py-0 me-2" onclick="toggleAdmin('${m}', true)">관리자 임명</button><button class="btn btn-sm btn-outline-danger py-0" onclick="kickMember('${m}')">삭제</button>`;
-                else if(myRole === "admin") actionBtn = `<button class="btn btn-sm btn-outline-danger py-0" onclick="kickMember('${m}')">삭제</button>`;
-            }
-            return `<div class="list-group-item bg-transparent text-white border-secondary border-opacity-25 py-3 d-flex flex-column gap-2 flex-md-row justify-content-md-between align-items-md-center"><div class="d-flex align-items-center flex-wrap gap-2">${badge} <span class="fw-bold">${nick}</span> <span class="small text-secondary">(${m})</span></div><div class="text-end">${actionBtn}</div></div>`;
-        }).join('');
-    }
-    async function joinTeam() { const c = document.getElementById('joinTeamId').value.trim().toUpperCase(); if(!c) return; try { const q = await db.collection("teams").where("inviteCode", "==", c).get(); if(q.empty) return alert("유효하지 않은 코드입니다."); const tid = q.docs[0].id; let m = q.docs[0].data().members || []; if(!m.includes(myEmail)) { m.push(myEmail); await db.collection("teams").doc(tid).update({ members: m }); alert("팀 합류 성공!"); location.reload(); } else { alert("이미 소속된 팀입니다."); } } catch(e) { alert(e.message); } }
-    async function createTeam() { if(confirm("개설하시겠습니까?")) { const c = Math.random().toString(36).substring(2, 8).toUpperCase(); 
-                                                            await db.collection("teams").add({
-    createdAt: Date.now(),
-    members: [myEmail],
-    owner: myEmail,
-    admins: [],
-    noticeAdmins: [],
-    statusAdmins: [],
-    worklogAdmins: [],
-    leaveAdmins: [],
-    inviteCode: c
-});
-                                                            alert("팀이 성공적으로 개설되었습니다!"); location.reload(); } }
-    async function regenerateInviteCode() { if(confirm("기존 코드는 즉시 무효화됩니다. 계속하시겠습니까?")) { const c = Math.random().toString(36).substring(2, 8).toUpperCase(); await db.collection("teams").doc(myTeamId).update({ inviteCode: c }); document.getElementById('displayTeamId').value = c; alert("발급되었습니다!"); } }
-    async function kickMember(tEmail) {
-        if(confirm("팀에서 내보내시겠습니까?")) {
-            const tDoc = await db.collection("teams").doc(myTeamId).get();
-            const data = tDoc.data();
-    
-            let m = (data.members || []).filter(x => x !== tEmail);
-            let a = (data.admins || []).filter(x => x !== tEmail);
-            let noticeA = (data.noticeAdmins || []).filter(x => x !== tEmail);
-            let statusA = (data.statusAdmins || []).filter(x => x !== tEmail);
-            let worklogA = (data.worklogAdmins || []).filter(x => x !== tEmail);
-            let leaveA = (data.leaveAdmins || []).filter(x => x !== tEmail);
-    
-            await db.collection("teams").doc(myTeamId).update({
-                members: m,
-                admins: a,
-                noticeAdmins: noticeA,
-                statusAdmins: statusA,
-                worklogAdmins: worklogA,
-                leaveAdmins: leaveA
-            });
-    
-            loadTeamMembers();
-            alert("팀원이 삭제되었습니다.");
-        }
-    }
-    async function toggleAdmin(tEmail, isPro) { const tDoc = await db.collection("teams").doc(myTeamId).get(); let a = tDoc.data().admins || []; if(isPro) { if(!a.includes(tEmail)) a.push(tEmail); } else { a = a.filter(x => x !== tEmail); } await db.collection("teams").doc(myTeamId).update({ admins: a }); loadTeamMembers(); }
-    async function openPermModal(type) {
-        currentPermType = type;
-    
-        let title = '종합 상황판 담당자 설정';
-        let activeList = globalStatusAdmins;
-    
-        if (type === 'notice') {
-            title = '공지사항 담당자 설정';
-            activeList = globalNoticeAdmins;
-        } else if (type === 'worklog') {
-            title = '작업일보 완료 담당자 설정';
-            activeList = globalWorklogAdmins;
-        } else if (type === 'leave') {
-            title = '연차관리 담당자 설정';
-            activeList = globalLeaveAdmins;
-        }
-    
-        document.getElementById('permModalTitle').innerText = title;
+}
+
+async function loadTeamMembers() {
+    if (!myTeamId) return;
 
     const tDoc = await db.collection("teams").doc(myTeamId).get();
-    const members = tDoc.data().members || [];
-    
-    document.getElementById('permMemberList').innerHTML = members.map(m => {
-        let nick = globalEmailToNick[m] || m;
-        let checked = activeList.includes(m) ? 'checked' : '';
-        return `<label class="d-flex align-items-center gap-2 p-3 rounded perm-item-box cursor-pointer"><input type="checkbox" class="form-check-input perm-check" value="${m}" ${checked} style="width:20px; height:20px;"> <span class="fw-bold">${nick} <small class="text-secondary fw-normal">(${m})</small></span></label>`;
+    const tData = tDoc.data() || {};
+    const members = tData.members || [];
+
+    const btnRegenCode = document.getElementById('btnRegenCode');
+    if (btnRegenCode) {
+        btnRegenCode.style.display =
+            (myRole === "owner" || myRole === "admin") ? 'inline-block' : 'none';
+    }
+
+    const displayTeamId = document.getElementById('displayTeamId');
+    if (displayTeamId) {
+        displayTeamId.value = tData.inviteCode || '발급필요';
+    }
+
+    const memberList = document.getElementById('member-list');
+    if (!memberList) return;
+
+    memberList.innerHTML = members.map(m => {
+        const nick = globalEmailToNick[m] || m.split('@')[0];
+
+        let badge = "";
+        let actionBtn = "";
+
+        const isOwner = (tData.owner === m || m === "idong2300@naver.com");
+        const isAdmin = (tData.admins && tData.admins.includes(m));
+
+        if (isOwner) {
+            badge = `<span class="badge bg-warning text-dark">에디터</span>`;
+        } else if (isAdmin) {
+            badge = `<span class="badge bg-primary">관리자</span>`;
+
+            if (myRole === "owner") {
+                actionBtn = `
+                    <button class="btn btn-sm btn-outline-secondary py-0 me-2"
+                            onclick="toggleAdmin('${m}', false)">
+                        관리자 해제
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger py-0"
+                            onclick="kickMember('${m}')">
+                        삭제
+                    </button>
+                `;
+            }
+        } else {
+            badge = `<span class="badge bg-secondary">팀원</span>`;
+
+            if (myRole === "owner") {
+                actionBtn = `
+                    <button class="btn btn-sm btn-outline-info py-0 me-2"
+                            onclick="toggleAdmin('${m}', true)">
+                        관리자 임명
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger py-0"
+                            onclick="kickMember('${m}')">
+                        삭제
+                    </button>
+                `;
+            } else if (myRole === "admin") {
+                actionBtn = `
+                    <button class="btn btn-sm btn-outline-danger py-0"
+                            onclick="kickMember('${m}')">
+                        삭제
+                    </button>
+                `;
+            }
+        }
+
+        return `
+            <div class="list-group-item bg-transparent text-white border-secondary border-opacity-25 py-3 d-flex flex-column gap-2 flex-md-row justify-content-md-between align-items-md-center">
+                <div class="d-flex align-items-center flex-wrap gap-2">
+                    ${badge}
+                    <span class="fw-bold">${nick}</span>
+                    <span class="small text-secondary">(${m})</span>
+                </div>
+                <div class="text-end">
+                    ${actionBtn}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function joinTeam() {
+    const codeInput = document.getElementById('joinTeamId');
+    if (!codeInput) return;
+
+    const c = codeInput.value.trim().toUpperCase();
+    if (!c) return;
+
+    try {
+        const q = await db.collection("teams")
+            .where("inviteCode", "==", c)
+            .get();
+
+        if (q.empty) {
+            alert("유효하지 않은 코드입니다.");
+            return;
+        }
+
+        const tid = q.docs[0].id;
+        const teamData = q.docs[0].data();
+        const members = teamData.members || [];
+
+        if (!members.includes(myEmail)) {
+            members.push(myEmail);
+
+            await db.collection("teams").doc(tid).update({
+                members: members
+            });
+
+            alert("팀 합류 성공!");
+            location.reload();
+        } else {
+            alert("이미 소속된 팀입니다.");
+        }
+    } catch (e) {
+        alert(e.message);
+    }
+}
+
+async function createTeam() {
+    if (!confirm("개설하시겠습니까?")) return;
+
+    const c = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    await db.collection("teams").add({
+        createdAt: Date.now(),
+        members: [myEmail],
+        owner: myEmail,
+        admins: [],
+        noticeAdmins: [],
+        statusAdmins: [],
+        worklogAdmins: [],
+        leaveAdmins: [],
+        inviteCode: c
+    });
+
+    alert("팀이 성공적으로 개설되었습니다!");
+    location.reload();
+}
+
+async function regenerateInviteCode() {
+    if (!confirm("기존 코드는 즉시 무효화됩니다. 계속하시겠습니까?")) return;
+
+    const c = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    await db.collection("teams").doc(myTeamId).update({
+        inviteCode: c
+    });
+
+    const displayTeamId = document.getElementById('displayTeamId');
+    if (displayTeamId) {
+        displayTeamId.value = c;
+    }
+
+    alert("발급되었습니다!");
+}
+
+async function kickMember(tEmail) {
+    if (!confirm("팀에서 내보내시겠습니까?")) return;
+
+    const tDoc = await db.collection("teams").doc(myTeamId).get();
+    const data = tDoc.data() || {};
+
+    const members = (data.members || []).filter(x => x !== tEmail);
+    const admins = (data.admins || []).filter(x => x !== tEmail);
+    const noticeAdmins = (data.noticeAdmins || []).filter(x => x !== tEmail);
+    const statusAdmins = (data.statusAdmins || []).filter(x => x !== tEmail);
+    const worklogAdmins = (data.worklogAdmins || []).filter(x => x !== tEmail);
+    const leaveAdmins = (data.leaveAdmins || []).filter(x => x !== tEmail);
+
+    await db.collection("teams").doc(myTeamId).update({
+        members: members,
+        admins: admins,
+        noticeAdmins: noticeAdmins,
+        statusAdmins: statusAdmins,
+        worklogAdmins: worklogAdmins,
+        leaveAdmins: leaveAdmins
+    });
+
+    loadTeamMembers();
+    alert("팀원이 삭제되었습니다.");
+}
+
+async function toggleAdmin(tEmail, isPro) {
+    const tDoc = await db.collection("teams").doc(myTeamId).get();
+    const data = tDoc.data() || {};
+    let admins = data.admins || [];
+
+    if (isPro) {
+        if (!admins.includes(tEmail)) {
+            admins.push(tEmail);
+        }
+    } else {
+        admins = admins.filter(x => x !== tEmail);
+    }
+
+    await db.collection("teams").doc(myTeamId).update({
+        admins: admins
+    });
+
+    loadTeamMembers();
+}
+
+async function openPermModal(type) {
+    currentPermType = type;
+
+    let title = '종합 상황판 담당자 설정';
+    let activeList = globalStatusAdmins;
+
+    if (type === 'notice') {
+        title = '공지사항 담당자 설정';
+        activeList = globalNoticeAdmins;
+    } else if (type === 'worklog') {
+        title = '작업일보 완료 담당자 설정';
+        activeList = globalWorklogAdmins;
+    } else if (type === 'leave') {
+        title = '연차관리 담당자 설정';
+        activeList = globalLeaveAdmins;
+    }
+
+    const titleEl = document.getElementById('permModalTitle');
+    if (titleEl) {
+        titleEl.innerText = title;
+    }
+
+    const tDoc = await db.collection("teams").doc(myTeamId).get();
+    const tData = tDoc.data() || {};
+    const members = tData.members || [];
+
+    const permMemberList = document.getElementById('permMemberList');
+    if (!permMemberList) return;
+
+    permMemberList.innerHTML = members.map(m => {
+        const nick = globalEmailToNick[m] || m;
+        const checked = activeList.includes(m) ? 'checked' : '';
+
+        return `
+            <label class="d-flex align-items-center gap-2 p-3 rounded perm-item-box cursor-pointer">
+                <input type="checkbox"
+                       class="form-check-input perm-check"
+                       value="${m}"
+                       ${checked}
+                       style="width:20px; height:20px;">
+                <span class="fw-bold">
+                    ${nick}
+                    <small class="text-secondary fw-normal">(${m})</small>
+                </span>
+            </label>
+        `;
     }).join('');
 
     permModalInst.show();
 }
 
-    async function savePerms() {
-        let selected = [];
-        document.querySelectorAll('.perm-check:checked').forEach(cb => selected.push(cb.value));
-        
-        let updateData = {};
-        
-        if (currentPermType === 'notice') {
-            updateData.noticeAdmins = selected;
-        } else if (currentPermType === 'worklog') {
-            updateData.worklogAdmins = selected;
-        } else if (currentPermType === 'leave') {
-            updateData.leaveAdmins = selected;
-        } else {
-            updateData.statusAdmins = selected;
-        }
-        
-        await db.collection("teams").doc(myTeamId).update(updateData);
-        permModalInst.hide();
-        alert("담당자 권한이 성공적으로 저장되었습니다.\n(새로고침 시 권한이 반영됩니다.)");
-        location.reload(); 
+async function savePerms() {
+    const selected = [];
+    document.querySelectorAll('.perm-check:checked').forEach(cb => {
+        selected.push(cb.value);
+    });
+
+    const updateData = {};
+
+    if (currentPermType === 'notice') {
+        updateData.noticeAdmins = selected;
+    } else if (currentPermType === 'worklog') {
+        updateData.worklogAdmins = selected;
+    } else if (currentPermType === 'leave') {
+        updateData.leaveAdmins = selected;
+    } else {
+        updateData.statusAdmins = selected;
     }
 
+    await db.collection("teams").doc(myTeamId).update(updateData);
+
+    permModalInst.hide();
+
+    alert("담당자 권한이 성공적으로 저장되었습니다.\n(새로고침 시 권한이 반영됩니다.)");
+    location.reload();
+}
 
 window.checkTeamUI = checkTeamUI;
 window.loadTeamMembers = loadTeamMembers;
