@@ -12,6 +12,7 @@ let siteModal, ganttModal, permModalInst;
 let globalNoticeAdmins = [];
 let globalStatusAdmins = [];
 let globalWorklogAdmins = [];
+let globalLeaveAdmins = [];
 let currentPermType = "";
 
 let worklogCollapsedStates = {};
@@ -285,6 +286,9 @@ function applyRoleRestrictions() {
 
     const btnWorklogPerm = document.getElementById("btnWorklogPerm");
     if (btnWorklogPerm) btnWorklogPerm.style.display = isSuper ? "inline-block" : "none";
+
+    const btnLeavePerm = document.getElementById("btnLeavePerm");
+    if (btnLeavePerm) btnLeavePerm.style.display = isSuper ? "inline-block" : "none";
     
     document.getElementById("btnEditStatus").style.display = canUseEditMode ? "inline-block" : "none";
     document.getElementById("btnDeleteGantt").style.display = isSuper ? "inline-block" : "none";
