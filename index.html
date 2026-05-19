@@ -1125,6 +1125,43 @@
             <button class="btn btn-primary w-50 py-2 fw-bold" onclick="saveLeaveMemberInfo()">저장하기</button>
         </div>
     </div>
+</div>    
+
+<!-- 연차 직원 상세정보 편집 모달 -->
+<div class="modal-backdrop-custom" id="leaveMemberEditModal">
+    <div class="modal-box">
+        <h5 class="fw-bold mb-4 text-white">
+            <i class="bi bi-person-vcard me-2 text-info"></i>
+            연차 출력 정보 편집
+        </h5>
+
+        <input type="hidden" id="leaveEditEmail">
+
+        <div class="mb-3">
+            <label class="small text-secondary mb-1">직원 이름</label>
+            <input type="text" id="leaveEditName" class="form-control input-dark fw-bold" readonly>
+        </div>
+
+        <div class="mb-3">
+            <label class="small text-secondary mb-1">부서</label>
+            <input type="text" id="leaveEditDepartment" class="form-control input-dark" placeholder="예: 시공팀, 관리팀">
+        </div>
+
+        <div class="mb-3">
+            <label class="small text-secondary mb-1">직급</label>
+            <input type="text" id="leaveEditPosition" class="form-control input-dark" placeholder="예: 팀장, 과장, 사원">
+        </div>
+
+        <div class="mb-4">
+            <label class="small text-secondary mb-1">담당업무</label>
+            <input type="text" id="leaveEditDuty" class="form-control input-dark" placeholder="예: 현장관리, 목공, 필름, 전기">
+        </div>
+
+        <div class="d-flex gap-2">
+            <button class="btn btn-secondary w-50 py-2 fw-bold" onclick="closeLeaveMemberEditModal()">취소</button>
+            <button class="btn btn-primary w-50 py-2 fw-bold" onclick="saveLeaveMemberInfo()">저장하기</button>
+        </div>
+    </div>
 </div>
 
 <div class="modal fade" id="permModal" tabindex="-1" aria-hidden="true">
