@@ -6,6 +6,7 @@
     
     let teamMembersInfo = {};
     let globalLeaveRecords = [];
+    let globalLeaveMembers = [];
 
 function canManageLeave() {
     const leaveAdmins = (typeof globalLeaveAdmins !== 'undefined' && Array.isArray(globalLeaveAdmins))
@@ -304,6 +305,8 @@ if (window.LEAVE_STANDALONE) {
     function loadLeaveData(teamData) {
         const safeTeamData = teamData && typeof teamData === 'object' ? teamData : {};
         const members = Array.isArray(safeTeamData.members) ? safeTeamData.members.filter(Boolean) : [];
+        globalLeaveMembers = members;
+        
         const targetYearEl = document.getElementById('calYear');
         const targetYear = targetYearEl && targetYearEl.value ? Number(targetYearEl.value) : new Date().getFullYear();
 
@@ -1091,6 +1094,120 @@ if (window.LEAVE_STANDALONE) {
             alert('직원 정보를 저장하는 중 오류가 발생했습니다.\n' + (error.message || error));
         }
     }
+    function openManualLeaveModal() {
+    if (!canManageLeave()) {
+        alert("과거 연차 기록 등록 권한이 없습니다.");
+        return;
+    }
+
+    const modalEl = document.getElementById("manualLeaveModal");
+    const userEl = document.getElementById("manualLeaveUser");
+    const dateEl = document.getElementById("manualLeaveDate");
+    const typeEl = document.getElementById("manualLeaveType");
+    const reasonEl = document.getElementById("manualLeaveReason");
+
+    if (!modalEl || !userEl || !dateEl || !typeEl || !reasonEl) {
+        alert("과거 연차 등록 모달을 찾을 수 없습니다.");
+        return;
+    }
+
+    const members = Array.isArray(globalLeaveMembers) ? globalLeaveMembers : [];
+
+    userEl.innerHTML = members.map(email => {
+        const nick = globalEmailToNick[email] || email.split("@")[0] || email;
+        return `<option value="${escapeLeaveHtml(email)}">${escapeLeaveHtml(nick)} (${escapeLeaveHtml(email)})</option>`;
+    }).join("");
+
+    if (!userEl.innerHTML) {
+        userEl.innerHTML = `<option value="">등록 가능한 팀원이 없습니다</option>`;
+    }
+
+    const today = new Date();
+    dateEl.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    typeEl.value = "1";
+    reasonEl.value = "과거 사용분 등록";
+
+    modalEl.style.display = "flex";
+}
+
+function closeManualLeaveModal() {
+    const modalEl = document.getElementById("manualLeaveModal");
+    if (modalEl) modalEl.style.display = "none";
+
+    const userEl = document.getElementById("manualLeaveUser");
+    const dateEl = document.getElementById("manualLeaveDate");
+    const typeEl = document.getElementById("manualLeaveType");
+    const reasonEl = document.getElementById("manualLeaveReason");
+
+    if (userEl) userEl.innerHTML = "";
+    if (dateEl) dateEl.value = "";
+    if (typeEl) typeEl.value = "1";
+    if (reasonEl) reasonEl.value = "";
+}
+
+async function saveManualLeaveRecord() {
+    if (!myTeamId) {
+        alert("팀 정보를 먼저 불러온 뒤 등록할 수 있습니다.");
+        return;
+    }
+
+    if (!canManageLeave()) {
+        alert("과거 연차 기록 등록 권한이 없습니다.");
+        return;
+    }
+
+    const userEmail = String(document.getElementById("manualLeaveUser")?.value || "").trim();
+    const date = document.getElementById("manualLeaveDate")?.value || "";
+    const typeValue = document.getElementById("manualLeaveType")?.value || "1";
+    const reason = document.getElementById("manualLeaveReason")?.value.trim() || "과거 사용분 등록";
+
+    if (!userEmail) {
+        alert("직원을 선택해주세요.");
+        return;
+    }
+
+    if (!date) {
+        alert("사용 날짜를 선택해주세요.");
+        return;
+    }
+
+    const amount = typeValue === "1" ? 1 : 0.5;
+    const type = typeValue === "1" ? "full" : (typeValue === "0.5_am" ? "am" : "pm");
+
+    const nick = globalEmailToNick[userEmail] || userEmail.split("@")[0] || userEmail;
+    const typeText = amount === 1 ? "종일 연차" : (type === "am" ? "오전 반차" : "오후 반차");
+
+    if (!confirm(`${nick}님의 ${date} ${typeText} 기록을 등록하시겠습니까?\n\n등록 즉시 승인 완료 상태로 반영됩니다.`)) {
+        return;
+    }
+
+    try {
+        await db.collection("leave_records").add({
+            teamId: myTeamId,
+            userEmail: userEmail,
+            date: date,
+            amount: amount,
+            type: type,
+            reason: reason,
+            approved: true,
+
+            manualEntry: true,
+            manualEntryLabel: "권한자 과거 연차 등록",
+            createdBy: myEmail,
+            createdByName: userNickname,
+            createdAt: Date.now(),
+
+            approvedAt: Date.now(),
+            approvedBy: myEmail
+        });
+
+        closeManualLeaveModal();
+        alert("과거 연차 사용 기록이 등록되었습니다.");
+    } catch (error) {
+        console.error("과거 연차 기록 등록 오류:", error);
+        alert("과거 연차 기록 등록 중 오류가 발생했습니다.\n" + (error.message || error));
+    }
+}
 
 window.initLeaveCalendarSelects = initLeaveCalendarSelects;
 window.loadLeaveData = loadLeaveData;
@@ -1110,3 +1227,6 @@ window.canManageLeave = canManageLeave;
 window.openLeaveMemberEditModal = openLeaveMemberEditModal;
 window.closeLeaveMemberEditModal = closeLeaveMemberEditModal;
 window.saveLeaveMemberInfo = saveLeaveMemberInfo;
+window.openManualLeaveModal = openManualLeaveModal;
+window.closeManualLeaveModal = closeManualLeaveModal;
+window.saveManualLeaveRecord = saveManualLeaveRecord;
