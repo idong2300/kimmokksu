@@ -1,6 +1,8 @@
     // 공정표 (Gantt)
     let ganttTasks = ["철거", "목공", "전기", "필름", "도장", "소방", "가구", "바닥", "유리", "금속", "사인", "설비", "청소", "기타 잔손"];
     let ganttDates = []; let ganttState = {}; let currentGanttId = null;
+    let activeGanttFilter = "mine";
+    let cachedGanttLogs = [];
     // 💡 V35: 공정표 메모 기능 전역 변수 💡
     let ganttMemos = {};
     let isGanttLongPress = false;
@@ -308,24 +310,214 @@
             tax: tr.querySelector('.ec-tax').checked, 
             note: tr.querySelector('.ec-note').value 
         }));
-        const data = { teamId: myTeamId, site: site, tasks: ganttTasks, dates: ganttDates.map(d=>d.toISOString()), state: ganttState, memos: ganttMemos, extra: extra, updatedAt: Date.now() };
-        if(currentGanttId) await db.collection("gantt_logs").doc(currentGanttId).update(data); else { const res = await db.collection("gantt_logs").add(data); currentGanttId = res.id; }
+        const data = {
+            teamId: myTeamId,
+            site: site,
+            tasks: ganttTasks,
+            dates: ganttDates.map(d => d.toISOString()),
+            state: ganttState,
+            memos: ganttMemos,
+            extra: extra,
+            updatedAt: Date.now(),
+            lastModifier: userNickname,
+            lastModifierEmail: myEmail
+        };
+        
+        if (currentGanttId) {
+            await db.collection("gantt_logs").doc(currentGanttId).update(data);
+        } else {
+            const res = await db.collection("gantt_logs").add({
+                ...data,
+                writerName: userNickname,
+                writerEmail: myEmail,
+                originalWriter: userNickname,
+                isCompleted: false,
+                completedAt: null,
+                completedBy: null
+            });
+            currentGanttId = res.id;
+        }
+        
         alert("저장되었습니다.");
     }
     
     function loadGanttList() {
-        db.collection("gantt_logs").where("teamId","==",myTeamId).orderBy("updatedAt","desc").onSnapshot(ss => {
-            const container = document.getElementById('saved-gantt-list');
-            if(ss.empty) return container.innerHTML = '<p class="text-secondary ms-2">저장된 내역이 없습니다.</p>';
-            container.innerHTML = ss.docs.map(doc => {
-                let d = doc.data(); let ds = new Date(d.updatedAt || Date.now()).toLocaleDateString();
-                return `<div class="col-12 col-md-6 col-lg-4"><div class="t5-card p-4 d-flex flex-column h-100 mb-0 border border-secondary border-opacity-25" style="min-height: 120px;"><div><h5 class="fw-bold text-white text-truncate mb-1">${d.site}</h5><span class="small text-secondary">저장일: ${ds}</span></div><div class="text-end mt-3"><button class="btn btn-primary px-4 fw-bold" onclick="loadGanttDoc('${doc.id}')">불러오기</button></div></div></div>`;
-            }).join('');
+        db.collection("gantt_logs")
+            .where("teamId", "==", myTeamId)
+            .orderBy("updatedAt", "desc")
+            .onSnapshot(ss => {
+                cachedGanttLogs = ss.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+    
+                renderGanttList();
+            });
+    }
+    
+    function switchGanttFilter(filter, btn) {
+        activeGanttFilter = filter;
+    
+        document.querySelectorAll(".gantt-filter-btn").forEach(b => {
+            b.classList.remove("btn-primary", "btn-success", "btn-outline-secondary", "btn-outline-success");
+            b.classList.add("btn-outline-secondary");
         });
+    
+        if (btn) {
+            btn.classList.remove("btn-outline-secondary", "btn-outline-success");
+    
+            if (filter === "done") {
+                btn.classList.add("btn-success");
+            } else {
+                btn.classList.add("btn-primary");
+            }
+        }
+    
+        renderGanttList();
+    }
+    
+    function renderGanttList() {
+        const container = document.getElementById("saved-gantt-list");
+        if (!container) return;
+    
+        let list = cachedGanttLogs;
+    
+        if (activeGanttFilter === "mine") {
+            list = cachedGanttLogs.filter(log =>
+                !log.isCompleted &&
+                (
+                    log.writerEmail === myEmail ||
+                    log.lastModifierEmail === myEmail ||
+                    log.originalWriter === userNickname ||
+                    (!log.writerEmail && !log.originalWriter)
+                )
+            );
+        } else if (activeGanttFilter === "all") {
+            list = cachedGanttLogs.filter(log => !log.isCompleted);
+        } else if (activeGanttFilter === "done") {
+            list = cachedGanttLogs.filter(log => log.isCompleted);
+        }
+    
+        if (list.length === 0) {
+            container.innerHTML = `
+                <div class="col-12">
+                    <div class="t5-card p-4 text-center text-secondary">
+                        표시할 공정표가 없습니다.
+                    </div>
+                </div>
+            `;
+            return;
+        }
+    
+        container.innerHTML = list.map(d => {
+            const ds = new Date(d.updatedAt || Date.now()).toLocaleDateString();
+            const writer = d.writerName || d.originalWriter || d.lastModifier || "작성자 미지정";
+            const completedBadge = d.isCompleted ? `<span class="badge bg-success ms-2">완료</span>` : "";
+            const completedInfo = d.isCompleted
+                ? `<br><span class="small text-success">완료자: ${d.completedBy || "-"}</span>`
+                : "";
+    
+            const canTempEdit = myRole === "owner" || myRole === "admin";
+    
+            const tempEditButtons = canTempEdit ? `
+                <button class="t5-btn-small bg-warning text-dark" onclick="tempEditGanttWriter('${d.id}')">작성자 수정</button>
+                ${
+                    d.isCompleted
+                        ? `<button class="t5-btn-small bg-info text-white" onclick="toggleGanttCompleted('${d.id}', false)">완료 해제</button>`
+                        : `<button class="t5-btn-small bg-success text-white" onclick="toggleGanttCompleted('${d.id}', true)">완료 처리</button>`
+                }
+            ` : "";
+    
+            return `
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="t5-card p-4 d-flex flex-column h-100 mb-0 border border-secondary border-opacity-25" style="min-height: 150px;">
+                        <div class="flex-grow-1">
+                            <h5 class="fw-bold text-white text-truncate mb-1">
+                                ${d.site || "-"} ${completedBadge}
+                            </h5>
+                            <span class="small text-secondary">
+                                저장일: ${ds}<br>
+                                작성자: ${writer}
+                                ${d.lastModifier ? `<br>최근 수정: ${d.lastModifier}` : ""}
+                                ${completedInfo}
+                            </span>
+                        </div>
+    
+                        <div class="d-flex gap-1 flex-wrap justify-content-end mt-3">
+                            <button class="btn btn-primary px-3 fw-bold" onclick="loadGanttDoc('${d.id}')">불러오기</button>
+                            ${tempEditButtons}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join("");
     }
     
     async function loadGanttDoc(id) { const d = (await db.collection("gantt_logs").doc(id).get()).data(); currentGanttId = id; document.getElementById('ganttSiteName').value = d.site; ganttTasks = d.tasks; ganttState = d.state; ganttMemos = d.memos || {}; ganttDates = d.dates.map(str => new Date(str)); document.getElementById('extraCostBody').innerHTML = ''; d.extra.forEach(ex => addExtraCostRow(ex)); document.getElementById('ganttDashboard').style.display = 'block'; renderGantt(); calcExtraSum(); window.scrollTo(0,0); }
     async function deleteGantt() { if(confirm("이 공정표를 삭제하시겠습니까?")) { if(currentGanttId) await db.collection("gantt_logs").doc(currentGanttId).delete(); document.getElementById('ganttDashboard').style.display = 'none'; currentGanttId=null; ganttMemos = {}; } }
+    async function tempEditGanttWriter(id) {
+        if (!(myRole === "owner" || myRole === "admin")) {
+            alert("작성자 수정 권한이 없습니다.");
+            return;
+        }
+    
+        const snap = await db.collection("gantt_logs").doc(id).get();
+        if (!snap.exists) {
+            alert("공정표 데이터를 찾을 수 없습니다.");
+            return;
+        }
+    
+        const d = snap.data() || {};
+        const currentName = d.writerName || d.originalWriter || d.lastModifier || "";
+        const currentEmail = d.writerEmail || d.lastModifierEmail || "";
+    
+        const nextName = prompt("작성자 이름을 입력하세요.", currentName);
+        if (nextName === null) return;
+    
+        const nextEmail = prompt("작성자 이메일을 입력하세요.\n내 파일 분류에 사용됩니다.", currentEmail);
+        if (nextEmail === null) return;
+    
+        const cleanName = nextName.trim();
+        const cleanEmail = nextEmail.trim();
+    
+        if (!cleanName) {
+            alert("작성자 이름은 비워둘 수 없습니다.");
+            return;
+        }
+    
+        await db.collection("gantt_logs").doc(id).update({
+            writerName: cleanName,
+            originalWriter: cleanName,
+            writerEmail: cleanEmail,
+            updatedAt: Date.now(),
+            lastModifier: userNickname,
+            lastModifierEmail: myEmail
+        });
+    
+        alert("작성자 정보가 수정되었습니다.");
+    }
+    
+    async function toggleGanttCompleted(id, nextCompleted) {
+        if (!(myRole === "owner" || myRole === "admin")) {
+            alert("완료 상태 변경 권한이 없습니다.");
+            return;
+        }
+    
+        const msg = nextCompleted
+            ? "이 공정표를 완료 처리하시겠습니까?"
+            : "이 공정표의 완료 상태를 해제하시겠습니까?";
+    
+        if (!confirm(msg)) return;
+    
+        await db.collection("gantt_logs").doc(id).update({
+            isCompleted: !!nextCompleted,
+            completedAt: nextCompleted ? Date.now() : null,
+            completedBy: nextCompleted ? myEmail : null,
+            updatedAt: Date.now(),
+            lastModifier: userNickname,
+            lastModifierEmail: myEmail
+        });
+    }
 
 window.formatComma = formatComma;
 window.openGanttCreateModal = openGanttCreateModal;
@@ -349,5 +541,9 @@ window.addExtraCostRow = addExtraCostRow;
 window.calcExtraSum = calcExtraSum;
 window.saveGantt = saveGantt;
 window.loadGanttList = loadGanttList;
+window.renderGanttList = renderGanttList;
+window.switchGanttFilter = switchGanttFilter;
+window.tempEditGanttWriter = tempEditGanttWriter;
+window.toggleGanttCompleted = toggleGanttCompleted;
 window.loadGanttDoc = loadGanttDoc;
 window.deleteGantt = deleteGantt;
