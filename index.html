@@ -671,7 +671,18 @@
                 </div>
             </div>
 
-            <h5 class="fw-bold mt-5 mb-3"><i class="bi bi-archive me-2"></i>저장된 현장 목록</h5>
+            <div class="d-flex justify-content-between align-items-center mt-5 mb-3 flex-wrap gap-2">
+                <h5 class="fw-bold m-0">
+                    <i class="bi bi-archive me-2"></i>저장된 현장 목록
+                </h5>
+            
+                <div class="d-flex gap-2 overflow-auto pb-1">
+                    <button class="btn btn-sm btn-primary gantt-filter-btn" onclick="switchGanttFilter('mine', this)">내 파일</button>
+                    <button class="btn btn-sm btn-outline-secondary gantt-filter-btn" onclick="switchGanttFilter('all', this)">전체 파일</button>
+                    <button class="btn btn-sm btn-outline-success gantt-filter-btn" onclick="switchGanttFilter('done', this)">완료된 파일</button>
+                </div>
+            </div>
+            
             <div id="saved-gantt-list" class="row g-3"></div>
         </section>
 
